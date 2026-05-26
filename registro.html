@@ -1,0 +1,372 @@
+<?php
+session_start();
+include("conexion.php");
+
+/* =========================
+   INICIALIZAR CARRITO
+========================= */
+if (!isset($_SESSION['carrito'])) {
+    $_SESSION['carrito'] = [];
+}
+
+/* =========================
+   PROTECCIÓN LOGIN
+========================= */
+if (!isset($_SESSION['usuario_id']) || $_SESSION['rol'] != 'cliente') {
+    header("Location: index.html");
+    exit();
+}
+
+/* =========================
+   CATALOGO
+========================= */
+$sql = "SELECT productos.*, tiendas.id AS tienda_id, tiendas.nombre AS tienda_nombre 
+        FROM productos 
+        INNER JOIN tiendas ON productos.tienda_id = tiendas.id";
+$productos = $conn->query($sql);
+?>
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Cliente</title>
+
+<style>
+body{
+    margin:0;
+    font-family:'Segoe UI', sans-serif;
+    background:#f4f6fb;
+    display:flex;
+}
+
+/* SIDEBAR */
+.sidebar{
+    width:230px;
+    height:100vh;
+    background:linear-gradient(180deg,#1e1b4b,#312e81);
+    color:white;
+    position:fixed;
+    padding:20px;
+}
+
+.sidebar h2{
+    margin-bottom:25px;
+}
+
+.sidebar div{
+    padding:12px;
+    margin:10px 0;
+    border-radius:10px;
+    cursor:pointer;
+    transition:0.3s;
+    background:rgba(255,255,255,0.08);
+}
+
+.sidebar div:hover{
+    background:#6366f1;
+    transform:translateX(6px);
+}
+
+/* MAIN */
+.main{
+    margin-left:250px;
+    padding:25px;
+    width:100%;
+}
+
+/* SECCIONES */
+.seccion{
+    display:none;
+    animation:fadeIn 0.4s ease;
+}
+
+.activa{
+    display:block;
+}
+
+/* GRID CARDS */
+.grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+    gap:20px;
+}
+
+/* CARD BONITA */
+.card{
+    background:white;
+    border-radius:16px;
+    padding:15px;
+    box-shadow:0 10px 25px rgba(0,0,0,0.08);
+    transition:0.3s ease;
+    animation:pop 0.3s ease;
+}
+
+.card:hover{
+    transform:translateY(-6px);
+    box-shadow:0 15px 30px rgba(0,0,0,0.15);
+}
+
+/* IMAGEN */
+.card img{
+    width:100%;
+    height:140px;
+    object-fit:cover;
+    border-radius:12px;
+    margin-bottom:10px;
+}
+
+/* TEXTOS */
+h1,h2,h3{
+    margin:10px 0;
+}
+
+small{
+    color:#666;
+}
+
+/* BOTONES */
+button{
+    padding:10px;
+    border:none;
+    border-radius:10px;
+    cursor:pointer;
+    margin-top:8px;
+    transition:0.3s;
+}
+
+/* BOTÓN PRINCIPAL */
+.btn-primary{
+    background:#4f46e5;
+    color:white;
+}
+
+.btn-primary:hover{
+    background:#3730a3;
+    transform:scale(1.05);
+}
+
+/* BOTÓN VERDE */
+.btn-green{
+    background:#10b981;
+    color:white;
+}
+
+.btn-green:hover{
+    background:#059669;
+    transform:scale(1.05);
+}
+
+/* BOTÓN ROJO */
+.btn-red{
+    background:#ef4444;
+    color:white;
+}
+
+.btn-red:hover{
+    background:#dc2626;
+    transform:scale(1.05);
+}
+
+/* CANTIDAD */
+.qty{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+    margin-top:10px;
+}
+
+.section-card{
+    background:white;
+    border-radius:16px;
+    padding:20px;
+    box-shadow:0 10px 25px rgba(0,0,0,0.08);
+    margin-bottom:20px;
+    animation:fadeIn 0.4s ease;
+}
+/* ANIMACIONES */
+@keyframes fadeIn{
+    from{opacity:0; transform:translateY(10px);}
+    to{opacity:1; transform:translateY(0);}
+}
+
+@keyframes pop{
+    from{transform:scale(0.95); opacity:0;}
+    to{transform:scale(1); opacity:1;}
+}
+</style>
+</head>
+
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+    <h2>Cliente</h2>
+    <div onclick="mostrar('inicio')">🏠 Inicio</div>
+    <div onclick="mostrar('catalogo')">🛍️ Catálogo</div>
+    <div onclick="mostrar('carrito')">🛒 Carrito</div>
+    <div onclick="mostrar('perfil')">👤 Perfil</div>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+<!-- INICIO -->
+<div id="inicio" class="seccion activa">
+    <div class="section-card">
+        <h1>Bienvenido 👋</h1>
+        <p>Explora productos y compra fácilmente</p>
+    </div>
+</div>
+
+<!-- CATALOGO -->
+<div id="catalogo" class="seccion">
+
+    <div class="section-card">
+        <h2>Catálogo</h2>
+    </div>
+
+    <div class="grid">
+    <?php while($p = $productos->fetch_assoc()): ?>
+        <div class="card">
+            <img src="<?php echo $p['imagen']; ?>" width="100%">
+            <h3><?php echo $p['nombre']; ?></h3>
+            <p>$<?php echo $p['precio']; ?></p>
+            <small><?php echo $p['tienda_nombre']; ?></small>
+
+            <button class="btn-add" onclick="agregar(<?php echo $p['id']; ?>)">
+                Agregar 🛒
+            </button>
+
+            <a href="tienda.php?id=<?php echo $p['tienda_id']; ?>">
+                <button class="btn-green">Ir a tienda 🏪</button>
+            </a>
+        </div>
+    <?php endwhile; ?>
+    </div>
+</div>
+
+<!-- CARRITO -->
+<div id="carrito" class="seccion">
+
+    <div class="section-card">
+        <h2>Carrito 🛒</h2>
+    </div>
+
+    <div id="carritoContenido">
+
+<?php 
+$total = 0;
+
+if (!empty($_SESSION['carrito'])) {
+
+foreach ($_SESSION['carrito'] as $index => $item):
+
+    $id = $item['id'];
+
+    $sql = "SELECT * FROM productos WHERE id=$id";
+    $res = $conn->query($sql);
+    $p = $res->fetch_assoc();
+
+    $subtotal = $p['precio'] * $item['cantidad'];
+    $total += $subtotal;
+?>
+
+<div class="card">
+<center>
+    <h3><?php echo $p['nombre']; ?></h3>
+    <p>$<?php echo $p['precio']; ?></p>
+
+    <p>
+        <button class="btn-red" onclick="menos(<?php echo $index; ?>)">-</button>
+        <?php echo $item['cantidad']; ?>
+        <button class="btn-green" onclick="mas(<?php echo $index; ?>)">+</button>
+    </p>
+
+    <p>Subtotal: $<?php echo $subtotal; ?></p>
+
+    <button class="btn-red" onclick="eliminar(<?php echo $index; ?>)">
+        Eliminar
+    </button>
+</center>
+</div>
+
+<?php endforeach; ?>
+
+<h3>Total: $<?php echo $total; ?></h3>
+
+<?php } else { ?>
+    <p>No hay productos en el carrito</p>
+<?php } ?>
+
+    </div>
+</div>
+<!-- PERFIL -->
+<div id="perfil" class="seccion">
+
+    <div class="section-card">
+        <h2>Mi perfil 👤</h2>
+
+        <p><strong>Usuario ID:</strong> <?php echo $_SESSION['usuario_id']; ?></p>
+        <p><strong>Rol:</strong> <?php echo $_SESSION['rol']; ?></p>
+
+    </div>
+
+</div>
+
+</div>
+
+<!-- JS -->
+<script>
+
+function mostrar(id){
+    document.querySelectorAll('.seccion').forEach(s => s.classList.remove('activa'));
+    document.getElementById(id).classList.add('activa');
+}
+
+/* =========================
+   AJAX CARRITO
+========================= */
+function agregar(id){
+    fetch("carrito_ajax.php", {
+        method:"POST",
+        headers:{"Content-Type":"application/x-www-form-urlencoded"},
+        body:"accion=agregar&id="+id
+    }).then(() => recargarCarrito());
+}
+
+function mas(index){
+    fetch("carrito_ajax.php", {
+        method:"POST",
+        headers:{"Content-Type":"application/x-www-form-urlencoded"},
+        body:"accion=mas&index="+index
+    }).then(() => recargarCarrito());
+}
+
+function menos(index){
+    fetch("carrito_ajax.php", {
+        method:"POST",
+        headers:{"Content-Type":"application/x-www-form-urlencoded"},
+        body:"accion=menos&index="+index
+    }).then(() => recargarCarrito());
+}
+
+function eliminar(index){
+    fetch("carrito_ajax.php", {
+        method:"POST",
+        headers:{"Content-Type":"application/x-www-form-urlencoded"},
+        body:"accion=eliminar&index="+index
+    }).then(() => recargarCarrito());
+}
+
+/* =========================
+   RECARGAR SOLO CARRITO
+========================= */
+function recargarCarrito(){
+    location.reload(); // simple y estable (sin errores)
+}
+</script>
+
+</body>
+</html>
