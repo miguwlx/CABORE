@@ -2,29 +2,20 @@
 session_start();
 include("conexion.php");
 
-$usuario_id = $_SESSION['usuario_id'];
-
-$nombre = $_POST['nombre'];
-$descripcion = $_POST['descripcion'];
-$color = $_POST['color'];
-
-/* IMAGEN LOGO */
-$logo = "";
-
-if(isset($_FILES['logo']) && $_FILES['logo']['name'] != ""){
-    $logo = "img/logos/" . $_FILES['logo']['name'];
-    move_uploaded_file($_FILES['logo']['tmp_name'], $logo);
-
-    $sql = "UPDATE tiendas 
-            SET nombre='$nombre', descripcion='$descripcion', color='$color', logo='$logo'
-            WHERE usuario_id=$usuario_id";
-}else{
-    $sql = "UPDATE tiendas 
-            SET nombre='$nombre', descripcion='$descripcion', color='$color'
-            WHERE usuario_id=$usuario_id";
+if (!isset($_SESSION['usuario_id']) || $_SESSION['rol'] !== 'emprendedor') {
+    header("Location: login.html"); exit();
 }
 
-$conn->query($sql);
+$usuario_id = (int)$_SESSION['usuario_id'];
+$id         = (int)($_POST['id'] ?? 0);
+
+// Solo borrar si el producto pertenece a una tienda del usuario logueado
+$stmt = $conn->prepare(
+    "DELETE p FROM productos p
+     INNER JOIN tiendas t ON p.tienda_id = t.id
+     WHERE p.id = ? AND t.usuario_id = ?"
+);
+$stmt->bind_param("ii", $id, $usuario_id);
+$stmt->execute();
 
 header("Location: emprendedor.php");
-?>

@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Caboré — Iniciar sesión</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/login.css">
+</head>
+<body>
+
+<div class="noise"></div>
+<div class="bg-canvas">
+  <canvas id="gridCanvas"></canvas>
+</div>
+<div class="bg-glow a"></div>
+<div class="bg-glow b"></div>
+
+<div class="page">
+
+  <!-- ── SPINE ── -->
+  <div class="spine">
+    <a href="landing.html" class="spine-logo">Caboré</a>
+    <div class="spine-dot"></div>
+    <span class="spine-year">2026</span>
+  </div>
+
+  <!-- ── HERO ── -->
+  <div class="hero">
+    <a href="landing.html" class="back-link">
+      <span class="back-arrow">←</span> Volver al inicio
+    </a>
+
+    <div class="hero-badge">
+      <div class="live-dot"></div>
+      Marketplace colombiano
+    </div>
+
+    <h1>
+      <span>Bienvenido</span>
+      <span>de <em>vuelta.</em></span>
+    </h1>
+
+    <p class="hero-desc">
+      Ingresa a tu cuenta para explorar el catálogo, gestionar tu tienda o llenar tu carrito.
+    </p>
+
+    <div class="info-pills">
+      <div class="pill">
+        <div class="pill-icon">🛒</div>
+        <span class="pill-text">Clientes — explora y compra de emprendedores locales</span>
+      </div>
+      <div class="pill">
+        <div class="pill-icon">🚀</div>
+        <span class="pill-text">Emprendedores — gestiona productos y personaliza tu tienda</span>
+      </div>
+      <div class="pill">
+        <div class="pill-icon">🔒</div>
+        <span class="pill-text">Acceso seguro con contraseña cifrada</span>
+      </div>
+    </div>
+
+    <div class="hero-deco">🛍️</div>
+  </div>
+
+  <!-- ── RIGHT PANEL ── -->
+  <div class="panel-area">
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab tab--active" id="tab-cliente" onclick="switchTab('cliente')">
+        <span class="tab-emoji">🛒</span> Cliente
+      </button>
+      <button class="tab" id="tab-emprendedor" onclick="switchTab('emprendedor')">
+        <span class="tab-emoji">🚀</span> Emprendedor
+      </button>
+    </div>
+
+    <!-- Panels wrapper -->
+    <div class="form-panels">
+
+      <!-- PANEL CLIENTE -->
+      <div class="form-panel active" id="panel-cliente">
+
+        <div class="eyebrow eyebrow--blue">Acceso cliente</div>
+        <div class="panel-title">Hola de nuevo</div>
+        <p class="panel-sub">Explora y compra en las mejores tiendas locales</p>
+
+        <!-- Error (se activa por JS si hay ?error=1&panel=cliente) -->
+        <div class="error-box" id="err-cliente">
+          ⚠️&nbsp; Correo o contraseña incorrectos. Inténtalo de nuevo.
+        </div>
+
+        <form action="login.php" method="POST" autocomplete="on">
+          <input type="hidden" name="tipo" value="cliente">
+
+          <div class="field">
+            <label class="field-label" for="correo-c">Correo electrónico</label>
+            <div class="field-wrap focus-blue">
+              <input
+                type="email"
+                id="correo-c"
+                name="correo"
+                placeholder="tu@correo.com"
+                required
+                autocomplete="email"
+              >
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="pwd-c">Contraseña</label>
+            <div class="field-wrap focus-blue">
+              <input
+                type="password"
+                id="pwd-c"
+                name="contrasena"
+                placeholder="••••••••"
+                required
+                autocomplete="current-password"
+              >
+              <button type="button" class="pwd-toggle" onclick="togglePwd('pwd-c', this)" aria-label="Mostrar contraseña">
+                👁
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-submit btn--blue">
+            Ingresar como cliente →
+          </button>
+        </form>
+
+        <div class="panel-footer">
+          ¿No tienes cuenta? <a href="registro (1).html">Regístrate gratis</a>
+        </div>
+      </div>
+
+      <!-- PANEL EMPRENDEDOR -->
+      <div class="form-panel" id="panel-emprendedor">
+
+        <div class="eyebrow eyebrow--green">Acceso emprendedor</div>
+        <div class="panel-title">Panel de tu tienda</div>
+        <p class="panel-sub">Gestiona productos, personaliza tu marca y vende más</p>
+
+        <!-- Error -->
+        <div class="error-box" id="err-emprendedor">
+          ⚠️&nbsp; Correo o contraseña incorrectos. Inténtalo de nuevo.
+        </div>
+
+        <form action="login.php" method="POST" autocomplete="on">
+          <input type="hidden" name="tipo" value="emprendedor">
+
+          <div class="field">
+            <label class="field-label" for="correo-e">Correo electrónico</label>
+            <div class="field-wrap focus-green">
+              <input
+                type="email"
+                id="correo-e"
+                name="correo"
+                placeholder="tu@correo.com"
+                required
+                autocomplete="email"
+              >
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="field-label" for="pwd-e">Contraseña</label>
+            <div class="field-wrap focus-green">
+              <input
+                type="password"
+                id="pwd-e"
+                name="contrasena"
+                placeholder="••••••••"
+                required
+                autocomplete="current-password"
+              >
+              <button type="button" class="pwd-toggle" onclick="togglePwd('pwd-e', this)" aria-label="Mostrar contraseña">
+                👁
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" class="btn-submit btn--green">
+            Ingresar como emprendedor →
+          </button>
+        </form>
+
+        <div class="panel-footer">
+          ¿No tienes cuenta? <a href="registro (1).html">Empieza a vender gratis</a>
+        </div>
+      </div>
+
+    </div><!-- end form-panels -->
+
+    <!-- Bottom bar -->
+    <div class="bottom-bar">
+      <span>¿Aún no tienes cuenta?</span>
+      <a href="registro (1).html">Crear cuenta gratis →</a>
+    </div>
+
+  </div><!-- end panel-area -->
+</div><!-- end page -->
+
+<script>
+/* ── Tab switch ─────────────────────────────── */
+function switchTab(name) {
+  document.querySelectorAll('.form-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('tab--active'));
+  document.getElementById('panel-' + name).classList.add('active');
+  document.getElementById('tab-' + name).classList.add('tab--active');
+}
+
+/* ── Read URL params to show errors ─────────── */
+(function () {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('error') === '1') {
+    const panel = params.get('panel') || 'cliente';
+    // panel value from login.php is 'empren' or 'cliente'
+    const target = panel === 'empren' ? 'emprendedor' : 'cliente';
+    switchTab(target);
+    const box = document.getElementById('err-' + target);
+    if (box) box.classList.add('visible');
+  }
+})();
+
+/* ── Password visibility toggle ─────────────── */
+function togglePwd(inputId, btn) {
+  const input = document.getElementById(inputId);
+  const show  = input.type === 'password';
+  input.type  = show ? 'text' : 'password';
+  btn.textContent = show ? '🙈' : '👁';
+}
+
+/* ── Animated grid background ───────────────── */
+const canvas = document.getElementById('gridCanvas');
+const ctx    = canvas.getContext('2d');
+
+function resize() {
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+const COLS = 20, ROWS = 13;
+const cells = [];
+for (let r = 0; r < ROWS; r++) {
+  for (let c = 0; c < COLS; c++) {
+    cells.push({
+      r, c,
+      phase: Math.random() * Math.PI * 2,
+      speed: 0.003 + Math.random() * 0.005
+    });
+  }
+}
+
+let t = 0;
+(function draw() {
+  t++;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const cw = canvas.width  / COLS;
+  const rh = canvas.height / ROWS;
+  cells.forEach(cell => {
+    const a = (Math.sin(t * cell.speed + cell.phase) + 1) / 2 * 0.11;
+    ctx.strokeStyle = `rgba(184,146,60,${a})`;
+    ctx.lineWidth   = 0.5;
+    ctx.strokeRect(cell.c * cw, cell.r * rh, cw, rh);
+  });
+  requestAnimationFrame(draw);
+})();
+</script>
+
+</body>
+</html>

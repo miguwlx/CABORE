@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Caboré — Marketplace colombiano</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/landing.css">
+</head>
+<body>
+
+<div class="noise"></div>
+<div class="bg-canvas">
+  <canvas id="gridCanvas"></canvas>
+</div>
+<div class="bg-glow a"></div>
+<div class="bg-glow b"></div>
+
+<!-- NAV -->
+<nav>
+  <a href="#" class="nav-logo">Cabo<em>ré</em></a>
+  <ul class="nav-links">
+    <li><a href="#features">Funciones</a></li>
+    <li><a href="#como">Cómo funciona</a></li>
+    <li><a href="#roles">Emprendedores</a></li>
+  </ul>
+  <div class="nav-cta">
+    <a href="login.html" class="btn-ghost">Iniciar sesión</a>
+    <a href="registro (1).html" class="btn-gold">Crear cuenta →</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-inner">
+    <div class="hero-badge">
+      <div class="live-dot"></div>
+      Marketplace colombiano
+    </div>
+
+    <h1>
+      <span class="line-block">Compra.</span>
+      <span class="line-block">Vende.</span>
+      <span class="line-block"><em>Crece.</em></span>
+    </h1>
+
+    <p class="hero-sub">
+      La plataforma que conecta emprendedores locales con clientes que valoran lo auténtico. Crea tu tienda en minutos — es gratis, siempre.
+    </p>
+
+    <div class="hero-actions">
+      <a href="registro (1).html" class="btn-hero-primary">Crear cuenta gratis →</a>
+      <a href="login.html" class="btn-hero-secondary">Ya tengo cuenta</a>
+    </div>
+
+    <div class="hero-stats">
+      <div class="stat-item">
+        <div class="stat-num">100%</div>
+        <div class="stat-label">Gratis para siempre</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">&lt;2 min</div>
+        <div class="stat-label">Para abrir tu tienda</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-num">🇨🇴</div>
+        <div class="stat-label">Hecho en Colombia</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Floating product cards -->
+  <div class="hero-visual">
+    <div class="float-card">
+      <div class="fc-label">Producto destacado</div>
+      <div class="fc-name">Bolso artesanal Wayuu</div>
+      <div class="fc-price">$85.000</div>
+      <div class="fc-store">🏪 Artesanías del Norte</div>
+    </div>
+    <div class="float-card">
+      <div class="fc-label">Nuevo en catálogo</div>
+      <div class="fc-name">Café de altura 500g</div>
+      <div class="fc-price">$38.000</div>
+      <div class="fc-store">🏪 Finca El Paraíso</div>
+    </div>
+    <div class="float-card">
+      <div class="fc-label">Más vendido</div>
+      <div class="fc-name">Sombrero vueltiao</div>
+      <div class="fc-price">$120.000</div>
+      <div class="fc-store">🏪 Moda Caribe</div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features-section" id="features">
+  <div class="reveal">
+    <div class="section-tag">¿Por qué Caboré?</div>
+    <h2 class="section-title">Todo lo que necesitas para <em>vender y comprar</em></h2>
+  </div>
+
+  <div class="features-grid">
+    <div class="feature-card reveal">
+      <div class="fc-icon-big">🏪</div>
+      <h3>Tu tienda personalizada</h3>
+      <p>Logo, colores y descripción propios. Tu marca, tu identidad — visible para todos desde el primer día.</p>
+    </div>
+    <div class="feature-card reveal">
+      <div class="fc-icon-big">📦</div>
+      <h3>Gestión de productos</h3>
+      <p>Agrega, edita y elimina productos en segundos. Sube fotos, precios y descripciones sin complicaciones.</p>
+    </div>
+    <div class="feature-card reveal">
+      <div class="fc-icon-big">🛒</div>
+      <h3>Carrito de compras</h3>
+      <p>Tus clientes pueden explorar, agregar al carrito y gestionar sus pedidos de forma intuitiva.</p>
+    </div>
+    <div class="feature-card reveal">
+      <div class="fc-icon-big">🌐</div>
+      <h3>Catálogo público</h3>
+      <p>Cada tienda tiene su URL propia. Compártela en redes y que el mundo conozca lo que ofreces.</p>
+    </div>
+    <div class="feature-card reveal">
+      <div class="fc-icon-big">🔒</div>
+      <h3>Acceso seguro</h3>
+      <p>Contraseñas cifradas, sesiones protegidas y acceso diferenciado según tu rol en la plataforma.</p>
+    </div>
+    <div class="feature-card reveal">
+      <div class="fc-icon-big">⚡</div>
+      <h3>Rápido y confiable</h3>
+      <p>Operaciones en tiempo real. Agrega al carrito, actualiza inventario y ve cambios al instante.</p>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how-section" id="como">
+  <div class="reveal">
+    <div class="section-tag">Proceso</div>
+    <h2 class="section-title">Cómo <em>funciona</em></h2>
+  </div>
+
+  <div class="how-grid">
+    <div class="how-step reveal">
+      <div class="how-num">1</div>
+      <h4>Crea tu cuenta</h4>
+      <p>Regístrate en 30 segundos. Elige si eres cliente o emprendedor.</p>
+    </div>
+    <div class="how-step reveal">
+      <div class="how-num">2</div>
+      <h4>Configura tu perfil</h4>
+      <p>Personaliza tu tienda o explora el catálogo de emprendedores.</p>
+    </div>
+    <div class="how-step reveal">
+      <div class="how-num">3</div>
+      <h4>Publica o compra</h4>
+      <p>Sube productos y recibe pedidos, o llena tu carrito y ordena.</p>
+    </div>
+    <div class="how-step reveal">
+      <div class="how-num">4</div>
+      <h4>Crece</h4>
+      <p>Tu tienda visible 24/7. Más ventas, más clientes, más impacto.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ROLES -->
+<section class="roles-section" id="roles">
+  <div class="role-card role-card-cliente reveal">
+    <span class="role-badge badge-cliente">Para clientes</span>
+    <span class="role-icon">🛒</span>
+    <h2>Compra lo auténtico</h2>
+    <p>Descubre productos únicos de emprendedores colombianos. Explora catálogos, agrega al carrito y apoya el comercio local.</p>
+    <ul class="role-perks">
+      <li><span class="perk-check check-blue">✓</span> Catálogo completo de todas las tiendas</li>
+      <li><span class="perk-check check-blue">✓</span> Carrito de compras integrado</li>
+      <li><span class="perk-check check-blue">✓</span> Búsqueda y filtros de productos</li>
+      <li><span class="perk-check check-blue">✓</span> Acceso a tiendas públicas directamente</li>
+    </ul>
+    <a href="registro (1).html" class="btn-role-cliente">Entrar como cliente →</a>
+  </div>
+
+  <div class="role-card role-card-empren reveal">
+    <span class="role-badge badge-empren">Para emprendedores</span>
+    <span class="role-icon">🚀</span>
+    <h2>Vende sin límites</h2>
+    <p>Crea tu tienda, sube tus productos y llega a miles de clientes. Todo desde un panel simple y poderoso.</p>
+    <ul class="role-perks">
+      <li><span class="perk-check check-green">✓</span> Tienda personalizada con tu logo y colores</li>
+      <li><span class="perk-check check-green">✓</span> Gestión completa de productos</li>
+      <li><span class="perk-check check-green">✓</span> URL pública de tu tienda para compartir</li>
+      <li><span class="perk-check check-green">✓</span> Panel de control intuitivo</li>
+    </ul>
+    <a href="registro (1).html" class="btn-role-empren">Crear mi tienda →</a>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <h2 class="reveal">¿Listo para <em>empezar</em>?</h2>
+  <p class="reveal">Únete a Caboré hoy. Es gratis, siempre.</p>
+  <div class="cta-btns reveal">
+    <a href="registro (1).html" class="btn-cta-primary">Crear cuenta gratis →</a>
+    <a href="login.html" class="btn-cta-secondary">Ya tengo cuenta</a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <a href="#" class="footer-logo">Cabo<em>ré</em></a>
+  <div class="footer-copy">© 2026 Caboré Marketplace. Hecho con ❤️ en Colombia.</div>
+  <div class="footer-links">
+    <a href="login.html">Iniciar sesión</a>
+    <a href="registro (1).html">Registrarse</a>
+  </div>
+</footer>
+
+<script>
+/* ── Animated grid ── */
+const canvas = document.getElementById('gridCanvas');
+const ctx    = canvas.getContext('2d');
+
+function resize() {
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+const COLS = 20, ROWS = 14;
+const cells = [];
+for (let r = 0; r < ROWS; r++) {
+  for (let c = 0; c < COLS; c++) {
+    cells.push({ r, c, phase: Math.random() * Math.PI * 2, speed: 0.003 + Math.random() * 0.005 });
+  }
+}
+
+let t = 0;
+function draw() {
+  t++;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const cw = canvas.width / COLS;
+  const rh = canvas.height / ROWS;
+  cells.forEach(cell => {
+    const alpha = (Math.sin(t * cell.speed + cell.phase) + 1) / 2 * 0.10;
+    ctx.strokeStyle = `rgba(184,146,60,${alpha})`;
+    ctx.lineWidth   = 0.5;
+    ctx.strokeRect(cell.c * cw, cell.r * rh, cw, rh);
+  });
+  requestAnimationFrame(draw);
+}
+requestAnimationFrame(draw);
+
+/* ── Scroll reveal ── */
+const revealEls = document.querySelectorAll('.reveal');
+const observer  = new IntersectionObserver((entries) => {
+  entries.forEach((entry, i) => {
+    if (entry.isIntersecting) {
+      setTimeout(() => entry.target.classList.add('visible'), i * 80);
+      observer.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.12 });
+
+revealEls.forEach(el => observer.observe(el));
+
+/* ── Sticky nav shadow on scroll ── */
+const navEl = document.querySelector('nav');
+window.addEventListener('scroll', () => {
+  navEl.style.boxShadow = window.scrollY > 10
+    ? '0 4px 24px rgba(28,24,16,0.08)'
+    : 'none';
+});
+</script>
+</body>
+</html>
