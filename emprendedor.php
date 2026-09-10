@@ -55,6 +55,89 @@ $totalActivos    = count(array_filter($productos, fn($p) => $p['activo'] == 1));
 $totalDestacados = count(array_filter($productos, fn($p) => $p['destacado'] == 1));
 $valorInventario = array_sum(array_map(fn($p) => $p['precio'] * $p['stock'], $productos));
 
+// ══════════ VENTAS / ESTADÍSTICAS DE COMPRAS ══════════
+// Trae cada ítem vendido de pedidos que incluyan productos de esta tienda,
+// junto con los datos del pedido y del comprador.
+$stmtV = $conn->prepare("
+    SELECT pi.id AS item_id, pi.cantidad, pi.precio_unitario, pi.producto_id,
+           p.id AS pedido_id, p.estado, p.creado_en, p.direccion,
+           pr.nombre AS producto_nombre, pr.imagen AS producto_imagen,
+           u.nombre AS comprador_nombre, u.telefono AS comprador_telefono
+    FROM pedido_items pi
+    JOIN pedidos p    ON p.id = pi.pedido_id
+    JOIN productos pr ON pr.id = pi.producto_id
+    JOIN usuarios u   ON u.id = p.usuario_id
+    WHERE pr.tienda_id = ?
+    ORDER BY p.creado_en DESC
+");
+$stmtV->bind_param("i", $tienda_id);
+$stmtV->execute();
+$ventas = $stmtV->get_result()->fetch_all(MYSQLI_ASSOC);
+
+// Estadísticas de ventas
+$totalVentas          = 0;
+$pedidosIds           = [];
+$pedidosPendientesIds = [];
+$ventasPorDia         = []; // para el mini gráfico de los últimos 7 días
+
+foreach ($ventas as $v) {
+    $subtotal        = $v['cantidad'] * $v['precio_unitario'];
+    $totalVentas     += $subtotal;
+    $pedidosIds[$v['pedido_id']] = true;
+    if ($v['estado'] === 'pendiente') {
+        $pedidosPendientesIds[$v['pedido_id']] = true;
+    }
+    $dia = substr($v['creado_en'], 0, 10);
+    $ventasPorDia[$dia] = ($ventasPorDia[$dia] ?? 0) + $subtotal;
+}
+
+$totalPedidosVenta = count($pedidosIds);
+$totalPendientes   = count($pedidosPendientesIds);
+$ticketPromedio    = $totalPedidosVenta > 0 ? $totalVentas / $totalPedidosVenta : 0;
+
+// Últimos 7 días (para el mini gráfico de barras)
+$ultimos7dias = [];
+for ($i = 6; $i >= 0; $i--) {
+    $dia = date('Y-m-d', strtotime("-$i days"));
+    $ultimos7dias[] = ['fecha' => $dia, 'label' => date('D', strtotime($dia)), 'total' => $ventasPorDia[$dia] ?? 0];
+}
+$maxVentaDia = max(array_column($ultimos7dias, 'total')) ?: 1;
+
+// Productos más vendidos (top 5)
+$masVendidos = [];
+foreach ($ventas as $v) {
+    $pid = $v['producto_id'];
+    if (!isset($masVendidos[$pid])) {
+        $masVendidos[$pid] = ['nombre' => $v['producto_nombre'], 'imagen' => $v['producto_imagen'], 'cantidad' => 0, 'total' => 0];
+    }
+    $masVendidos[$pid]['cantidad'] += $v['cantidad'];
+    $masVendidos[$pid]['total']    += $v['cantidad'] * $v['precio_unitario'];
+}
+usort($masVendidos, fn($a, $b) => $b['cantidad'] <=> $a['cantidad']);
+$masVendidos = array_slice($masVendidos, 0, 5);
+
+// Agrupar por pedido para la tabla de ventas (un pedido puede tener varios ítems de esta tienda)
+$pedidosAgrupados = [];
+foreach ($ventas as $v) {
+    $pid = $v['pedido_id'];
+    if (!isset($pedidosAgrupados[$pid])) {
+        $pedidosAgrupados[$pid] = [
+            'pedido_id'  => $pid,
+            'estado'     => $v['estado'],
+            'creado_en'  => $v['creado_en'],
+            'comprador'  => $v['comprador_nombre'],
+            'telefono'   => $v['comprador_telefono'],
+            'direccion'  => $v['direccion'],
+            'items'      => [],
+            'total'      => 0,
+        ];
+    }
+    $pedidosAgrupados[$pid]['items'][] = $v;
+    $pedidosAgrupados[$pid]['total']  += $v['cantidad'] * $v['precio_unitario'];
+}
+$pedidosAgrupados = array_values($pedidosAgrupados);
+usort($pedidosAgrupados, fn($a, $b) => strtotime($b['creado_en']) <=> strtotime($a['creado_en']));
+
 // Mensaje flash
 $flash = $_SESSION['flash'] ?? null;
 unset($_SESSION['flash']);
@@ -77,6 +160,21 @@ unset($_SESSION['flash']);
 .badge-gold   { background:rgba(184,146,60,0.14);  color:var(--gold);  border:1px solid var(--border); }
 .badge-red    { background:rgba(220,38,38,0.10);   color:#b91c1c; border:1px solid rgba(220,38,38,0.25); }
 .badge-gray   { background:rgba(28,24,16,0.05); color:var(--muted); border:1px solid rgba(28,24,16,0.10); }
+
+/* Selector de estado del pedido (pestaña Ventas) */
+.estado-select {
+    padding:6px 10px;
+    border-radius:8px;
+    border:1.5px solid var(--border);
+    background:var(--mid);
+    font-family:'DM Sans',sans-serif;
+    font-size:12.5px;
+    font-weight:600;
+    color:var(--text);
+    cursor:pointer;
+}
+.estado-select:focus { outline:none; border-color:var(--gold); }
+.prod-table td { vertical-align:top; }
 
 /* Preview tienda */
 .store-banner-preview {
@@ -281,17 +379,23 @@ unset($_SESSION['flash']);
     </div>
 
     <nav class="sb-nav">
-        <div class="sb-item active" onclick="irA('inicio', this)">
+        <div class="sb-item active" data-tab="inicio" onclick="irA('inicio', this)">
             <span class="sb-icon">🏠</span> Inicio
         </div>
-        <div class="sb-item" onclick="irA('tienda', this)">
+        <div class="sb-item" data-tab="tienda" onclick="irA('tienda', this)">
             <span class="sb-icon">🎨</span> Mi Tienda
         </div>
-        <div class="sb-item" onclick="irA('productos', this)">
+        <div class="sb-item" data-tab="ventas" onclick="irA('ventas', this)">
+            <span class="sb-icon">📊</span> Ventas
+            <?php if ($totalPendientes > 0): ?>
+            <span class="badge badge-gold" style="margin-left:auto"><?= $totalPendientes ?></span>
+            <?php endif; ?>
+        </div>
+        <div class="sb-item" data-tab="productos" onclick="irA('productos', this)">
             <span class="sb-icon">📦</span> Productos
             <span class="badge badge-gray" style="margin-left:auto"><?= $totalProductos ?></span>
         </div>
-        <div class="sb-item" onclick="irA('agregar', this)">
+        <div class="sb-item" data-tab="agregar" onclick="irA('agregar', this)">
             <span class="sb-icon">➕</span> Agregar producto
         </div>
     </nav>
@@ -320,10 +424,13 @@ unset($_SESSION['flash']);
         <h1>Hola, <em><?= $nombre ?></em> 👋</h1>
         <p>Aquí tienes el resumen de tu tienda en Caboré. Todo listo para vender.</p>
         <div class="hero-btns" style="margin-top:20px">
-            <button class="btn btn-gold" onclick="irA('tienda', document.querySelectorAll('.sb-item')[1])">
+            <button class="btn btn-gold" onclick="irA('ventas', document.querySelector('.sb-item[data-tab=ventas]'))">
+                📊 Ver ventas
+            </button>
+            <button class="btn btn-outline" onclick="irA('tienda', document.querySelector('.sb-item[data-tab=tienda]'))">
                 🎨 Configurar tienda
             </button>
-            <button class="btn btn-outline" onclick="irA('agregar', document.querySelectorAll('.sb-item')[3])">
+            <button class="btn btn-outline" onclick="irA('agregar', document.querySelector('.sb-item[data-tab=agregar]'))">
                 ➕ Nuevo producto
             </button>
             <a href="tienda.php?id=<?= $tienda_id ?>" target="_blank">
@@ -398,7 +505,7 @@ unset($_SESSION['flash']);
     <div class="panel-card">
         <div class="sec-header">
             <h2>Últimos productos</h2>
-            <button class="btn btn-outline btn-sm" onclick="irA('productos', document.querySelectorAll('.sb-item')[2])">
+            <button class="btn btn-outline btn-sm" onclick="irA('productos', document.querySelector('.sb-item[data-tab=productos]'))">
                 Ver todos →
             </button>
         </div>
@@ -459,6 +566,144 @@ unset($_SESSION['flash']);
     <?php endif; ?>
 
 </div><!-- /inicio -->
+
+<!-- ══════════ VENTAS ══════════ -->
+<div id="ventas" class="seccion">
+
+    <div class="sec-header">
+        <h2 style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700">Ventas y estadísticas de compras</h2>
+    </div>
+
+    <!-- Stats de ventas -->
+    <div class="stats">
+        <div class="stat-card">
+            <div class="stat-label">Ventas totales</div>
+            <div class="stat-value" style="font-size:20px;margin-top:4px">$<?= number_format($totalVentas, 0, ',', '.') ?></div>
+            <div class="stat-sub">histórico de tu tienda</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Pedidos recibidos</div>
+            <div class="stat-value"><?= $totalPedidosVenta ?></div>
+            <div class="stat-sub">con productos tuyos</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Ticket promedio</div>
+            <div class="stat-value" style="font-size:20px;margin-top:4px">$<?= number_format($ticketPromedio, 0, ',', '.') ?></div>
+            <div class="stat-sub">por pedido</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Pendientes</div>
+            <div class="stat-value" style="color:<?= $totalPendientes > 0 ? '#b91c1c' : 'inherit' ?>"><?= $totalPendientes ?></div>
+            <div class="stat-sub">por confirmar / enviar</div>
+        </div>
+    </div>
+
+    <?php if (empty($ventas)): ?>
+
+    <div class="panel-card">
+        <div class="empty-state">
+            <span>📊</span>
+            <p>Todavía no tienes ventas registradas. Cuando alguien compre un producto tuyo, aparecerá aquí.</p>
+        </div>
+    </div>
+
+    <?php else: ?>
+
+    <!-- Mini gráfico últimos 7 días + Top productos -->
+    <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:20px;margin-bottom:24px">
+        <div class="panel-card">
+            <h2 style="font-size:16px;margin-bottom:18px">Ventas de los últimos 7 días</h2>
+            <div style="display:flex;align-items:flex-end;gap:10px;height:140px">
+                <?php foreach ($ultimos7dias as $d): ?>
+                <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">
+                    <div style="font-size:10px;color:var(--muted);margin-bottom:6px">
+                        <?= $d['total'] > 0 ? '$' . number_format($d['total'], 0, ',', '.') : '' ?>
+                    </div>
+                    <div style="width:100%;max-width:34px;border-radius:6px 6px 0 0;background:linear-gradient(180deg,var(--gold),#a8832a);height:<?= max(4, round($d['total'] / $maxVentaDia * 100)) ?>%"></div>
+                    <div style="font-size:11px;color:var(--muted);margin-top:8px;text-transform:capitalize"><?= $d['label'] ?></div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+
+        <div class="panel-card">
+            <h2 style="font-size:16px;margin-bottom:16px">🏆 Más vendidos</h2>
+            <?php foreach ($masVendidos as $mv): ?>
+            <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--border)">
+                <?php if (!empty($mv['imagen']) && file_exists($mv['imagen'])): ?>
+                    <img src="<?= htmlspecialchars($mv['imagen']) ?>" class="prod-thumb">
+                <?php else: ?>
+                    <div class="prod-thumb">📦</div>
+                <?php endif; ?>
+                <div style="flex:1;min-width:0">
+                    <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><?= htmlspecialchars($mv['nombre']) ?></div>
+                    <div style="font-size:12px;color:var(--muted)"><?= $mv['cantidad'] ?> vendidos</div>
+                </div>
+                <div style="font-weight:700;font-family:'Playfair Display',serif;color:var(--gold);font-size:13px;white-space:nowrap">
+                    $<?= number_format($mv['total'], 0, ',', '.') ?>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+
+    <!-- Tabla de pedidos -->
+    <div class="panel-card" style="padding:0;overflow:hidden">
+        <div style="padding:20px 20px 0"><h2 style="font-size:16px">Registro de pedidos</h2></div>
+        <table class="prod-table">
+            <thead>
+                <tr>
+                    <th>Pedido</th>
+                    <th>Comprador</th>
+                    <th>Productos</th>
+                    <th>Total</th>
+                    <th>Estado</th>
+                </tr>
+            </thead>
+            <tbody>
+            <?php foreach ($pedidosAgrupados as $ped): ?>
+                <tr>
+                    <td>
+                        <div style="font-weight:700">#<?= $ped['pedido_id'] ?></div>
+                        <div style="font-size:11px;color:var(--muted)"><?= date('d/m/Y H:i', strtotime($ped['creado_en'])) ?></div>
+                    </td>
+                    <td>
+                        <div style="font-weight:600"><?= htmlspecialchars($ped['comprador']) ?></div>
+                        <?php if (!empty($ped['telefono'])): ?>
+                        <div style="font-size:11px;color:var(--muted)">📞 <?= htmlspecialchars($ped['telefono']) ?></div>
+                        <?php endif; ?>
+                        <?php if (!empty($ped['direccion'])): ?>
+                        <div style="font-size:11px;color:var(--muted)">📍 <?= htmlspecialchars($ped['direccion']) ?></div>
+                        <?php endif; ?>
+                    </td>
+                    <td>
+                        <?php foreach ($ped['items'] as $it): ?>
+                        <div style="font-size:12.5px;margin-bottom:2px">
+                            <?= $it['cantidad'] ?>× <?= htmlspecialchars($it['producto_nombre']) ?>
+                        </div>
+                        <?php endforeach; ?>
+                    </td>
+                    <td>
+                        <span style="font-family:'Playfair Display',serif;font-weight:700;color:var(--gold)">
+                            $<?= number_format($ped['total'], 0, ',', '.') ?>
+                        </span>
+                    </td>
+                    <td>
+                        <select class="estado-select" data-pedido="<?= $ped['pedido_id'] ?>" onchange="cambiarEstadoPedido(this)">
+                            <?php foreach (['pendiente'=>'Pendiente','confirmado'=>'Confirmado','enviado'=>'En camino','entregado'=>'Entregado','cancelado'=>'Cancelado'] as $val => $label): ?>
+                            <option value="<?= $val ?>" <?= $ped['estado'] === $val ? 'selected' : '' ?>><?= $label ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </td>
+                </tr>
+            <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+
+    <?php endif; ?>
+
+</div><!-- /ventas -->
 
 <!-- ══════════ TIENDA ══════════ -->
 <div id="tienda" class="seccion">
@@ -605,7 +850,7 @@ unset($_SESSION['flash']);
                 <button class="view-btn active" id="btn-grilla" onclick="toggleVista('grilla')">⊞</button>
                 <button class="view-btn" id="btn-tabla" onclick="toggleVista('tabla')">≡</button>
             </div>
-            <button class="btn btn-gold btn-sm" onclick="irA('agregar', document.querySelectorAll('.sb-item')[3])">
+            <button class="btn btn-gold btn-sm" onclick="irA('agregar', document.querySelector('.sb-item[data-tab=agregar]'))">
                 ➕ Agregar
             </button>
         </div>
@@ -616,7 +861,7 @@ unset($_SESSION['flash']);
             <div class="empty-state">
                 <span>📦</span>
                 <p>Aún no tienes productos. ¡Agrega el primero!</p>
-                <button class="btn btn-gold" style="margin-top:16px" onclick="irA('agregar', document.querySelectorAll('.sb-item')[3])">
+                <button class="btn btn-gold" style="margin-top:16px" onclick="irA('agregar', document.querySelector('.sb-item[data-tab=agregar]'))">
                     ➕ Agregar producto
                 </button>
             </div>
@@ -838,6 +1083,35 @@ function toggleVista(modo) {
         btnT.classList.add('active');
         btnG.classList.remove('active');
     }
+}
+
+// Cambiar estado de un pedido (pestaña Ventas)
+function cambiarEstadoPedido(select) {
+    const pedidoId = select.dataset.pedido;
+    const estado   = select.value;
+    const original = select.dataset.original || estado;
+    select.disabled = true;
+
+    fetch('actualizar_pedido.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `pedido_id=${encodeURIComponent(pedidoId)}&estado=${encodeURIComponent(estado)}`
+    })
+    .then(r => r.json())
+    .then(data => {
+        select.disabled = false;
+        if (data.ok) {
+            select.dataset.original = estado;
+        } else {
+            select.value = original;
+            alert(data.error || 'No se pudo actualizar el estado del pedido.');
+        }
+    })
+    .catch(() => {
+        select.disabled = false;
+        select.value = original;
+        alert('Error de conexión al actualizar el pedido.');
+    });
 }
 
 // Preview imagen

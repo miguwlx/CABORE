@@ -21,7 +21,7 @@ $stmt = $pdo->prepare("
     LEFT JOIN pedido_items pi ON pi.pedido_id = p.id
     WHERE p.usuario_id = ?
     GROUP BY p.id
-    ORDER BY p.created_at DESC
+    ORDER BY p.creado_en DESC
 ");
 $stmt->execute([$usuario_id]);
 $pedidos = $stmt->fetchAll();
@@ -308,7 +308,8 @@ a { color: inherit; text-decoration: none; }
     <div class="nav-links">
         <a href="cliente.php"    class="nav-link"><i class="fas fa-store"></i> Tiendas</a>
         <a href="favoritos.php"  class="nav-link"><i class="far fa-heart"></i> Favoritos</a>
-        <a href="mis-pedidos.php" class="nav-link active"><i class="fas fa-box"></i> Mis pedidos</a>
+        <a href="perfil.php"     class="nav-link"><i class="fas fa-user"></i> Mi perfil</a>
+        <a href="mis_pedidos.php" class="nav-link active"><i class="fas fa-box"></i> Mis pedidos</a>
         <a href="logout.php"     class="nav-link"><i class="fas fa-sign-out-alt"></i> Salir</a>
     </div>
 </nav>
@@ -367,7 +368,7 @@ a { color: inherit; text-decoration: none; }
             <div>
                 <div class="pedido-num">
                     Pedido #<?= $pedido['id'] ?>
-                    <span><?= date('d/m/Y H:i', strtotime($pedido['created_at'])) ?></span>
+                    <span><?= date('d/m/Y H:i', strtotime($pedido['creado_en'])) ?></span>
                 </div>
                 <div class="pedido-meta" style="margin-top:6px">
                     <div class="pedido-meta-item">
@@ -417,10 +418,13 @@ a { color: inherit; text-decoration: none; }
             </ul>
 
             <div class="pedido-footer">
-                <?php if ($pedido['direccion_entrega']): ?>
+                <?php if ($pedido['direccion']): ?>
                 <div class="pedido-dir">
                     <i class="fas fa-map-marker-alt"></i>
-                    <?= htmlspecialchars($pedido['direccion_entrega']) ?>
+                    <?= htmlspecialchars($pedido['direccion']) ?>
+                    <?php if (!empty($pedido['telefono_contacto'])): ?>
+                        &nbsp;·&nbsp;<i class="fas fa-phone"></i> <?= htmlspecialchars($pedido['telefono_contacto']) ?>
+                    <?php endif; ?>
                 </div>
                 <?php endif; ?>
                 <div>
@@ -457,8 +461,6 @@ const lastBody = document.getElementById('body-<?= $ultimo_pedido ?>');
 const lastToggle = document.getElementById('toggle-<?= $ultimo_pedido ?>');
 if (lastBody) { lastBody.classList.add('open'); }
 if (lastToggle) { lastToggle.classList.add('open'); }
-// Limpiar carrito localStorage
-localStorage.removeItem('cabore_cart');
 <?php endif; ?>
 </script>
 </body>

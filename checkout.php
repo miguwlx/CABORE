@@ -9,17 +9,65 @@ if (!isset($_SESSION['usuario_id']) || $_SESSION['rol'] !== 'cliente') {
 
 $usuario_id = $_SESSION['usuario_id'];
 
+// ── Carrito SIEMPRE atado al usuario actual (evita que se mezcle entre cuentas) ──
+if (!isset($_SESSION['carrito']) || !isset($_SESSION['carrito_usuario_id']) || $_SESSION['carrito_usuario_id'] !== $usuario_id) {
+    $_SESSION['carrito']            = [];
+    $_SESSION['carrito_usuario_id'] = $usuario_id;
+}
+
 // Obtener datos del usuario
 $stmt = $pdo->prepare("SELECT * FROM usuarios WHERE id = ?");
 $stmt->execute([$usuario_id]);
 $usuario = $stmt->fetch();
 
+/**
+ * Carga el carrito SIEMPRE desde la sesión del servidor + base de datos.
+ * IMPORTANTE (corrección de bug/seguridad): antes el carrito llegaba como
+ * JSON enviado por el navegador (localStorage), lo que permitía que se
+ * mezclara entre cuentas o incluso que alguien manipulara el precio desde
+ * el navegador. Ahora el precio y los datos del producto siempre se leen
+ * de la base de datos, usando como única fuente de verdad $_SESSION['carrito'].
+ */
+function cargar_carrito_sesion(PDO $pdo): array {
+    $items = [];
+    foreach ($_SESSION['carrito'] as $prod_id => $cantidad) {
+        $stmt = $pdo->prepare("
+            SELECT p.id, p.nombre, p.precio, p.precio_oferta, p.imagen, p.stock, p.activo,
+                   t.nombre AS tienda
+            FROM productos p
+            JOIN tiendas t ON t.id = p.tienda_id
+            WHERE p.id = ?
+        ");
+        $stmt->execute([$prod_id]);
+        $p = $stmt->fetch();
+
+        if (!$p || !$p['activo'] || $p['stock'] <= 0) {
+            unset($_SESSION['carrito'][$prod_id]);
+            continue;
+        }
+
+        $cantidad = min($cantidad, $p['stock']);
+        $precio   = ($p['precio_oferta'] && $p['precio_oferta'] < $p['precio']) ? $p['precio_oferta'] : $p['precio'];
+
+        $items[] = [
+            'id'       => (int) $p['id'],
+            'nombre'   => $p['nombre'],
+            'precio'   => (float) $precio,
+            'imagen'   => $p['imagen'],
+            'tienda'   => $p['tienda'],
+            'cantidad' => (int) $cantidad,
+        ];
+    }
+    return $items;
+}
+
 // Procesar pedido enviado
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirmar'])) {
-    $carrito_json = $_POST['carrito_json'] ?? '[]';
-    $carrito      = json_decode($carrito_json, true);
-    $direccion    = trim($_POST['direccion'] ?? '');
-    $notas        = trim($_POST['notas'] ?? '');
+    $carrito   = cargar_carrito_sesion($pdo);
+    $direccion = trim($_POST['direccion'] ?? '');
+    $telefono  = trim($_POST['telefono'] ?? '');
+    $notas     = trim($_POST['notas'] ?? '');
+    $guardar_datos = isset($_POST['guardar_datos']);
 
     if (empty($carrito)) {
         $_SESSION['flash'] = ['tipo' => 'err', 'msg' => 'El carrito está vacío.'];
@@ -36,12 +84,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirmar'])) {
             // Calcular total
             $total = array_reduce($carrito, fn($s, $i) => $s + ($i['precio'] * $i['cantidad']), 0);
 
-            // Crear pedido
-            $stmt = $pdo->prepare("
-                INSERT INTO pedidos (usuario_id, total, direccion_entrega, notas, estado, created_at)
-                VALUES (?, ?, ?, ?, 'pendiente', NOW())
-            ");
-            $stmt->execute([$usuario_id, $total, $direccion, $notas]);
+            // Crear pedido (con compatibilidad por si la columna telefono_contacto
+            // todavía no existe en la base de datos — ver notas de instalación)
+            try {
+                $stmt = $pdo->prepare("
+                    INSERT INTO pedidos (usuario_id, total, direccion, telefono_contacto, notas, estado, creado_en)
+                    VALUES (?, ?, ?, ?, ?, 'pendiente', NOW())
+                ");
+                $stmt->execute([$usuario_id, $total, $direccion, $telefono, $notas]);
+            } catch (PDOException $e) {
+                $stmt = $pdo->prepare("
+                    INSERT INTO pedidos (usuario_id, total, direccion, notas, estado, creado_en)
+                    VALUES (?, ?, ?, ?, 'pendiente', NOW())
+                ");
+                $stmt->execute([$usuario_id, $total, $direccion, $notas]);
+            }
             $pedido_id = $pdo->lastInsertId();
 
             // Insertar ítems y descontar stock
@@ -73,9 +130,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirmar'])) {
 
             $pdo->commit();
 
+            // Carrito vacío tras la compra (antes nunca se vaciaba)
+            $_SESSION['carrito'] = [];
+
+            // Guardar dirección/teléfono en el perfil del comprador para la próxima vez
+            if ($guardar_datos) {
+                try {
+                    $stmt = $pdo->prepare("UPDATE usuarios SET direccion = ?, telefono = ? WHERE id = ?");
+                    $stmt->execute([$direccion, $telefono, $usuario_id]);
+                } catch (PDOException $e) {
+                    // Si la columna 'direccion' aún no existe en la BD, se ignora silenciosamente.
+                }
+            }
+
             $_SESSION['flash'] = ['tipo' => 'ok', 'msg' => "¡Pedido #$pedido_id realizado con éxito! Te contactaremos pronto."];
             $_SESSION['ultimo_pedido'] = $pedido_id;
-            header('Location: mis-pedidos.php');
+            header('Location: mis_pedidos.php');
             exit;
 
         } catch (Exception $e) {
@@ -85,9 +155,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirmar'])) {
     }
 }
 
-// Recibir carrito desde cliente.php (POST inicial)
-$carrito_json = $_POST['carrito'] ?? '[]';
-$carrito = json_decode($carrito_json, true) ?: [];
+// El carrito se carga SIEMPRE desde la sesión del servidor (nunca del navegador)
+$carrito = cargar_carrito_sesion($pdo);
 
 if (empty($carrito) && !isset($error)) {
     header('Location: cliente.php');
@@ -380,12 +449,10 @@ a { color: inherit; text-decoration: none; }
 
             <!-- Info del comprador -->
             <div class="user-strip">
-                <div class="user-avatar">
-                    <?= strtoupper(substr($usuario['nombre'] ?? 'U', 0, 1)) ?>
-                </div>
+                <div class="user-avatar"><?= strtoupper(substr($usuario['nombre'], 0, 1)) ?></div>
                 <div class="user-strip-info">
-                    <strong><?= htmlspecialchars($usuario['nombre'] ?? '') ?></strong>
-                    <span><?= htmlspecialchars($usuario['correo'] ?? '') ?></span>
+                    <strong><?= htmlspecialchars($usuario['nombre']) ?></strong>
+                    <span><?= htmlspecialchars($usuario['correo']) ?></span>
                 </div>
             </div>
 
@@ -396,22 +463,21 @@ a { color: inherit; text-decoration: none; }
             <?php endif; ?>
 
             <form method="POST" action="checkout.php">
-                <!-- Carrito oculto -->
-                <input type="hidden" name="carrito_json" value="<?= htmlspecialchars($carrito_json) ?>">
                 <input type="hidden" name="confirmar" value="1">
 
                 <div class="form-group">
                     <label class="form-label">Dirección completa *</label>
                     <input type="text" name="direccion" class="form-input"
                            placeholder="Ej: Calle 45 # 12-34, Bogotá"
-                           value="<?= htmlspecialchars($_POST['direccion'] ?? '') ?>"
+                           value="<?= htmlspecialchars($_POST['direccion'] ?? $usuario['direccion'] ?? '') ?>"
                            required>
                 </div>
 
                 <div class="form-group">
                     <label class="form-label">Teléfono de contacto</label>
                     <input type="tel" name="telefono" class="form-input"
-                    placeholder="Ej: 3001234567"value="<?= htmlspecialchars($_POST['telefono'] ?? '') ?>">
+                           placeholder="Ej: 3001234567"
+                           value="<?= htmlspecialchars($_POST['telefono'] ?? $usuario['telefono'] ?? '') ?>">
                 </div>
 
                 <div class="form-group">
@@ -419,6 +485,11 @@ a { color: inherit; text-decoration: none; }
                     <textarea name="notas" class="form-textarea"
                               placeholder="Color, talla, instrucciones especiales…"><?= htmlspecialchars($_POST['notas'] ?? '') ?></textarea>
                 </div>
+
+                <label style="display:flex;align-items:center;gap:9px;font-size:.82rem;color:var(--muted);margin:-6px 0 18px;cursor:pointer">
+                    <input type="checkbox" name="guardar_datos" value="1" checked style="width:16px;height:16px;accent-color:var(--accent)">
+                    Guardar esta dirección y teléfono en mi perfil para la próxima compra
+                </label>
 
                 <button type="submit" class="btn-confirm">
                     <i class="fas fa-check-circle"></i> Confirmar pedido
@@ -474,22 +545,5 @@ a { color: inherit; text-decoration: none; }
 
 </div>
 
-<script>
-// Si el carrito viene vacío desde localStorage (JS), rellenamos el form
-const cartRaw = localStorage.getItem('cabore_cart');
-if (cartRaw) {
-    const cart = JSON.parse(cartRaw);
-    // Si el form de carrito_json está vacío (llegamos por JS redirect)
-    const hiddenInput = document.querySelector('input[name="carrito_json"]');
-    if (hiddenInput && hiddenInput.value === '[]' && cart.length > 0) {
-        hiddenInput.value = cartRaw;
-    }
-}
-
-// Limpiar carrito al confirmar éxito (lo maneja mis-pedidos.php via flash)
-<?php if (isset($_SESSION['flash']) && $_SESSION['flash']['tipo'] === 'ok'): ?>
-localStorage.removeItem('cabore_cart');
-<?php endif; ?>
-</script>
 </body>
 </html>
