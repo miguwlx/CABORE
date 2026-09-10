@@ -753,6 +753,35 @@ unset($_SESSION['flash']);
             <form action="actualizar_tienda.php" method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="seccion" value="apariencia">
                 <div class="form-grid">
+                    <div class="form-group full">
+                    <label>Plantilla de tu tienda</label>
+
+                    <select name="plantilla">
+                    <option value="moderna"
+                    <?= ($tienda['plantilla'] ?? 'moderna') === 'moderna' ? 'selected' : '' ?>>
+                    Moderna
+                    </option>
+
+                    <option value="minimalista"
+                    <?= ($tienda['plantilla'] ?? 'moderna') === 'minimalista' ? 'selected' : '' ?>>
+                    Minimalista
+                    </option>
+
+                    <option value="elegante"
+                    <?= ($tienda['plantilla'] ?? 'moderna') === 'elegante' ? 'selected' : '' ?>>
+                    Elegante
+                    </option>
+
+                    <option value="colorida"
+                    <?= ($tienda['plantilla'] ?? 'moderna') === 'colorida' ? 'selected' : '' ?>>
+                    Colorida
+                    </option>
+                    </select>
+
+                    <div style="font-size:11px;color:var(--muted);margin-top:5px">
+                    Elige el estilo visual que tendrá tu tienda pública.
+                    </div>
+                    </div>
                     <div class="form-group">
                         <label>Color principal de tu tienda</label>
                         <div style="display:flex;gap:10px;align-items:center">

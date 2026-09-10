@@ -63,6 +63,14 @@ switch ($seccion) {
         $color = $_POST['color'] ?? '#c9a84c';
         if (!preg_match('/^#[0-9a-fA-F]{6}$/', $color)) $color = '#c9a84c';
 
+        $plantillasPermitidas = ['moderna', 'minimalista', 'elegante', 'colorida'];
+
+        $plantilla = $_POST['plantilla'] ?? 'moderna';
+
+        if (!in_array($plantilla, $plantillasPermitidas, true)) {
+        $plantilla = 'moderna';
+        }
+
         // Logo
         $logo = subirImagen('logo', 'img/logos/', 'logo_' . $usuario_id);
 
@@ -71,17 +79,17 @@ switch ($seccion) {
 
         // Construir query dinámico según lo que se subió
         if ($logo && $banner) {
-            $stmt = $conn->prepare("UPDATE tiendas SET color=?, logo=?, banner=? WHERE usuario_id=?");
-            $stmt->bind_param("sssi", $color, $logo, $banner, $usuario_id);
+            $stmt = $conn->prepare("UPDATE tiendas SET color=?, plantilla=?, logo=?, banner=? WHERE usuario_id=?");
+            $stmt->bind_param("ssssi", $color, $plantilla, $logo, $banner, $usuario_id);
         } elseif ($logo) {
-            $stmt = $conn->prepare("UPDATE tiendas SET color=?, logo=? WHERE usuario_id=?");
-            $stmt->bind_param("ssi", $color, $logo, $usuario_id);
+            $stmt = $conn->prepare("UPDATE tiendas SET color=?, plantilla=?, logo=? WHERE usuario_id=?");
+            $stmt->bind_param("sssi", $color, $plantilla, $logo, $usuario_id);
         } elseif ($banner) {
-            $stmt = $conn->prepare("UPDATE tiendas SET color=?, banner=? WHERE usuario_id=?");
-            $stmt->bind_param("ssi", $color, $banner, $usuario_id);
+            $stmt = $conn->prepare("UPDATE tiendas SET color=?, plantilla=?, banner=? WHERE usuario_id=?");
+            $stmt->bind_param("sssi", $color, $plantilla, $banner, $usuario_id);
         } else {
-            $stmt = $conn->prepare("UPDATE tiendas SET color=? WHERE usuario_id=?");
-            $stmt->bind_param("si", $color, $usuario_id);
+            $stmt = $conn->prepare("UPDATE tiendas SET color=?, plantilla=? WHERE usuario_id=?");
+            $stmt->bind_param("ssi", $color, $plantilla, $usuario_id);
         }
 
         $ok = $stmt->execute();
