@@ -41,7 +41,7 @@ function carrito_respuesta($pdo, $usuario_id) {
 
     foreach ($_SESSION['carrito'] as $prod_id => $cantidad) {
         $stmt = $pdo->prepare("
-            SELECT p.id, p.nombre, p.precio, p.precio_oferta, p.imagen, p.stock, p.activo,
+            SELECT p.id, p.nombre, p.precio, p.precio_oferta, p.imagen, p.stock, p.activo, p.estado_verificacion,
                    t.nombre AS tienda
             FROM productos p
             JOIN tiendas t ON t.id = p.tienda_id
@@ -50,8 +50,9 @@ function carrito_respuesta($pdo, $usuario_id) {
         $stmt->execute([$prod_id]);
         $p = $stmt->fetch();
 
-        // El producto pudo eliminarse, desactivarse o quedarse sin stock desde que se agregó
-        if (!$p || !$p['activo'] || $p['stock'] <= 0) {
+        // El producto pudo eliminarse, desactivarse, quedarse sin stock, o el
+        // admin pudo rechazarlo/dejarlo pendiente desde que se agregó al carrito
+        if (!$p || !$p['activo'] || $p['stock'] <= 0 || $p['estado_verificacion'] !== 'aprobado') {
             unset($_SESSION['carrito'][$prod_id]);
             $cambio = true;
             continue;
@@ -104,16 +105,12 @@ switch ($accion) {
             break;
         }
 
-        $stmt = $pdo->prepare("SELECT id, stock, activo FROM productos WHERE id = ?");
+        $stmt = $pdo->prepare("SELECT id, stock, activo, estado_verificacion FROM productos WHERE id = ?");
         $stmt->execute([$id]);
         $prod = $stmt->fetch();
 
-        if (!$prod || !$prod['activo']) {
+        if (!$prod || !$prod['activo'] || $prod['estado_verificacion'] !== 'aprobado') {
             echo json_encode(['ok' => false, 'error' => 'El producto no está disponible.']);
-            break;
-        }
-        if ($prod['stock'] <= 0) {
-            echo json_encode(['ok' => false, 'error' => 'Sin stock disponible.']);
             break;
         }
 

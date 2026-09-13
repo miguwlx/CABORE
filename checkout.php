@@ -32,7 +32,7 @@ function cargar_carrito_sesion(PDO $pdo): array {
     $items = [];
     foreach ($_SESSION['carrito'] as $prod_id => $cantidad) {
         $stmt = $pdo->prepare("
-            SELECT p.id, p.nombre, p.precio, p.precio_oferta, p.imagen, p.stock, p.activo,
+            SELECT p.id, p.nombre, p.precio, p.precio_oferta, p.imagen, p.stock, p.activo, p.estado_verificacion,
                    t.nombre AS tienda
             FROM productos p
             JOIN tiendas t ON t.id = p.tienda_id
@@ -41,7 +41,7 @@ function cargar_carrito_sesion(PDO $pdo): array {
         $stmt->execute([$prod_id]);
         $p = $stmt->fetch();
 
-        if (!$p || !$p['activo'] || $p['stock'] <= 0) {
+        if (!$p || !$p['activo'] || $p['stock'] <= 0 || $p['estado_verificacion'] !== 'aprobado') {
             unset($_SESSION['carrito'][$prod_id]);
             continue;
         }

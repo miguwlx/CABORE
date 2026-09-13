@@ -45,20 +45,24 @@ if (isset($_FILES['imagen']) && $_FILES['imagen']['error'] === UPLOAD_ERR_OK) {
     }
 }
 
+// Todo producto NUEVO entra como "pendiente" hasta que un administrador lo
+// revise y lo apruebe; recién ahí se vuelve visible para los clientes.
+$estado_verificacion = 'pendiente';
+
 $stmt = $conn->prepare(
     "INSERT INTO productos
-        (tienda_id, categoria_id, nombre, descripcion, precio, precio_oferta, imagen, stock, destacado, activo)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        (tienda_id, categoria_id, nombre, descripcion, precio, precio_oferta, imagen, stock, destacado, activo, estado_verificacion)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
 );
 $stmt->bind_param(
-    "iissddsiii",
+    "iissddsiiis",
     $tienda_id, $categoria_id, $nombre, $descripcion,
-    $precio, $precio_oferta, $ruta, $stock, $destacado, $activo
+    $precio, $precio_oferta, $ruta, $stock, $destacado, $activo, $estado_verificacion
 );
 $ok = $stmt->execute();
 
 $_SESSION['flash'] = $ok
-    ? ['tipo' => 'ok',  'msg' => "Producto «{$nombre}» guardado correctamente."]
+    ? ['tipo' => 'ok',  'msg' => "Producto «{$nombre}» guardado correctamente. Quedará visible para los clientes en cuanto un administrador lo revise y apruebe."]
     : ['tipo' => 'err', 'msg' => 'Error al guardar el producto. Intenta de nuevo.'];
 
 header("Location: emprendedor.php");

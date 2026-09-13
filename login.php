@@ -11,7 +11,7 @@ $correo    = trim($_POST['correo']);
 $contrasena = $_POST['contrasena'];
 
 // Prepared statement — evita SQL injection
-$stmt = $conn->prepare("SELECT id, nombre, rol, contrasena FROM usuarios WHERE correo = ?");
+$stmt = $conn->prepare("SELECT id, nombre, rol, contrasena, activo FROM usuarios WHERE correo = ?");
 $stmt->bind_param("s", $correo);
 $stmt->execute();
 $res = $stmt->get_result();
@@ -23,7 +23,12 @@ if ($res->num_rows === 1) {
     $ok = password_verify($contrasena, $usuario['contrasena'])
         || $usuario['contrasena'] === $contrasena; // fallback para cuentas viejas
 
-    if ($ok) {
+     if ($ok) {
+        if ((int)($usuario['activo'] ?? 1) === 0) {
+            header("Location: login.html?error=suspendida");
+            exit();
+        }
+
         session_regenerate_id(true);
         $_SESSION['usuario_id'] = $usuario['id'];
         $_SESSION['nombre']     = $usuario['nombre'];

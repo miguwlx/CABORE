@@ -31,9 +31,8 @@ $orden       = $_GET['orden'] ?? 'reciente';
 $solo_oferta = isset($_GET['oferta']);
 
 // Construir query de productos
-$where  = ["p.activo = 1", "p.stock > 0"];
+$where  = ["p.activo = 1", "p.stock > 0", "p.estado_verificacion = 'aprobado'"];
 $params = [];
-
 if ($busqueda) {
     $where[]  = "(p.nombre LIKE ? OR p.descripcion LIKE ? OR t.nombre LIKE ?)";
     $like     = "%$busqueda%";
@@ -85,7 +84,7 @@ $sugerencias = $pdo->query("
     FROM productos p
     JOIN tiendas t ON p.tienda_id = t.id
     LEFT JOIN resenas r ON r.producto_id = p.id
-    WHERE p.activo = 1 AND p.destacado = 1 AND p.stock > 0
+    WHERE p.activo = 1 AND p.destacado = 1 AND p.stock > 0 AND p.estado_verificacion = 'aprobado'
     GROUP BY p.id
     ORDER BY RAND()
     LIMIT 8

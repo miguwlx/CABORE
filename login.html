@@ -6,6 +6,7 @@
 <title>Caboré — Iniciar sesión</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/login.css">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 
@@ -132,6 +133,18 @@
 
         <div class="panel-footer">
           ¿No tienes cuenta? <a href="registro (1).html">Regístrate gratis</a>
+        </div>
+
+        <div style="text-align:center;margin-top:14px">
+          <a href="olvide_password.html" style="font-size:13px;color:var(--gold,#c9a84c)">¿Olvidaste tu contraseña?</a>
+        </div>
+
+        <div style="margin-top:18px;text-align:center">
+          <div id="g_id_onload"
+               data-client_id="853981485167-vsbi9h44ktc32d6c6ppipnls9fc6iqh7.apps.googleusercontent.com"
+               data-callback="handleGoogleCredential">
+          </div>
+          <div class="g_id_signin" data-type="standard" data-shape="pill" data-width="300"></div>
         </div>
       </div>
 
@@ -270,6 +283,9 @@ let t = 0;
   requestAnimationFrame(draw);
 })();
 </script>
+
+<script src="js/google-auth.js"></script>
+<script src="js/validaciones.js"></script>
 
 </body>
 </html>

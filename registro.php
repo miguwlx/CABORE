@@ -8,8 +8,12 @@ $contrasena = $_POST['contrasena']   ?? '';
 $rol       = $_POST['rol']           ?? 'cliente';
 
 // Validaciones básicas
-if (!$nombre || !$correo || !$contrasena || strlen($contrasena) < 6) {
-    $error = "Completa todos los campos correctamente.";
+if (!$nombre || strlen($nombre) < 3) {
+    $error = "Ingresa tu nombre completo (mínimo 3 caracteres).";
+} elseif (!$correo || !filter_var($correo, FILTER_VALIDATE_EMAIL)) {
+    $error = "Ingresa un correo electrónico válido.";
+} elseif (!$contrasena || strlen($contrasena) < 6) {
+    $error = "La contraseña debe tener al menos 6 caracteres.";
 } elseif (!in_array($rol, ['cliente','emprendedor'])) {
     $error = "Rol inválido.";
 } else {

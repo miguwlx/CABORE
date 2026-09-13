@@ -13,7 +13,12 @@ if (!$tienda) {
     echo "Tienda no encontrada"; exit();
 }
 
-$productos = $conn->query("SELECT * FROM productos WHERE tienda_id = $id ORDER BY id DESC");
+$stmtProd = $conn->prepare(
+    "SELECT * FROM productos WHERE tienda_id = ? AND activo = 1 AND estado_verificacion = 'aprobado' ORDER BY id DESC"
+);
+$stmtProd->bind_param("i", $id);
+$stmtProd->execute();
+$productos = $stmtProd->get_result();
 $color = htmlspecialchars($tienda['color'] ?? '#c9a84c');
 ?>
 <!DOCTYPE html>
