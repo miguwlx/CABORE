@@ -74,7 +74,7 @@ Proyecto desarrollado como parte del programa de formación en el **SENA**.
 3. Crea la base de datos:
    - Entra a `http://localhost/phpmyadmin`.
    - Crea una base de datos llamada `cabore`.
-   - Ve a la pestaña **Importar** y sube el archivo `database/cabore.sql` incluido en este repositorio.
+   - Ve a la pestaña **Importar** y sube el archivo `cabore.sql` incluido en este repositorio.
 
 4. Revisa `conexion.php` en la raíz del proyecto y confirma que los datos coincidan con tu entorno:
    ```php
@@ -122,7 +122,7 @@ conversaciones ── mensajes
 
 ## 👥 Equipo
 
-Proyecto desarrollado por estudiantes del SENA — rama **Emprendedor** del proyecto Caboré.
+Proyecto desarrollado por estudiantes del SENA.
 
 ## 📄 Licencia
 
