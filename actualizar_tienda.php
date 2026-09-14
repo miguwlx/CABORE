@@ -63,13 +63,10 @@ switch ($seccion) {
         $color = $_POST['color'] ?? '#c9a84c';
         if (!preg_match('/^#[0-9a-fA-F]{6}$/', $color)) $color = '#c9a84c';
 
-        $plantillasPermitidas = ['moderna', 'minimalista', 'elegante', 'colorida'];
-
+        // Plantilla
         $plantilla = $_POST['plantilla'] ?? 'moderna';
-
-        if (!in_array($plantilla, $plantillasPermitidas, true)) {
-        $plantilla = 'moderna';
-        }
+        $plantillasPermitidas = ['moderna', 'minimalista', 'elegante', 'colorida'];
+        if (!in_array($plantilla, $plantillasPermitidas, true)) $plantilla = 'moderna';
 
         // Logo
         $logo = subirImagen('logo', 'img/logos/', 'logo_' . $usuario_id);

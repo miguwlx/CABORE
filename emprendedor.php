@@ -33,6 +33,16 @@ $stmtT->execute();
 $tienda    = $stmtT->get_result()->fetch_assoc();
 $tienda_id = (int)$tienda['id'];
 
+$stmtNoLeidos = $conn->prepare("
+    SELECT COUNT(*) AS n
+    FROM mensajes m
+    JOIN conversaciones c ON c.id = m.conversacion_id
+    WHERE c.tienda_id = ? AND m.emisor_id != ? AND m.leido = 0
+");
+$stmtNoLeidos->bind_param("ii", $tienda_id, $usuario_id);
+$stmtNoLeidos->execute();
+$totalMensajesNoLeidos = $stmtNoLeidos->get_result()->fetch_assoc()['n'] ?? 0;
+
 // Categorías
 $categorias = $conn->query("SELECT * FROM categorias ORDER BY id");
 
@@ -115,6 +125,7 @@ foreach ($ventas as $v) {
 }
 usort($masVendidos, fn($a, $b) => $b['cantidad'] <=> $a['cantidad']);
 $masVendidos = array_slice($masVendidos, 0, 5);
+$productoEstrella = $masVendidos[0] ?? null;
 
 // Agrupar por pedido para la tabla de ventas (un pedido puede tener varios ítems de esta tienda)
 $pedidosAgrupados = [];
@@ -161,6 +172,77 @@ unset($_SESSION['flash']);
 .badge-red    { background:rgba(220,38,38,0.10);   color:#b91c1c; border:1px solid rgba(220,38,38,0.25); }
 .badge-gray   { background:rgba(28,24,16,0.05); color:var(--muted); border:1px solid rgba(28,24,16,0.10); }
 
+/* Producto estrella */
+.estrella-card {
+    background: linear-gradient(135deg, #fff8e8, #fef0cf);
+    border: 1px solid rgba(184,146,60,0.4);
+    border-radius: 20px;
+    padding: 26px 30px 22px;
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 24px;
+}
+.estrella-card::before {
+    content: '';
+    position: absolute; top:-50px; right:-50px;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, rgba(184,146,60,0.25), transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+.estrella-crown {
+    position: absolute;
+    top: 14px; left: 18px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: #7a5c1c;
+    background: rgba(255,255,255,0.65);
+    border: 1px solid rgba(184,146,60,0.4);
+    padding: 4px 10px;
+    border-radius: 20px;
+}
+.estrella-thumb {
+    width: 86px; height: 86px;
+    border-radius: 18px;
+    object-fit: cover;
+    background: #fff;
+    border: 3px solid rgba(255,255,255,0.8);
+    box-shadow: 0 10px 24px rgba(184,146,60,0.3);
+    display: flex; align-items:center; justify-content:center;
+    font-size: 36px;
+    flex-shrink: 0;
+    z-index: 1;
+}
+.estrella-info { z-index:1; flex:1; min-width:0; }
+.estrella-info h3 {
+    font-family:'Playfair Display',serif;
+    font-size: 22px; font-weight:800;
+    margin: 16px 0 8px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.estrella-stats { display:flex; gap:26px; flex-wrap:wrap; }
+.estrella-stat-num { font-family:'Playfair Display',serif; font-size:19px; font-weight:800; color:#7a5c1c; }
+.estrella-stat-label { font-size:11px; color:rgba(122,92,28,0.75); text-transform:uppercase; letter-spacing:0.5px; margin-top:2px; }
+
+/* Ranking en Más vendidos */
+.rank-row { display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid var(--border); }
+.rank-row:last-child { border-bottom:none; }
+.rank-badge {
+    width:24px; height:24px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    font-size:11px; font-weight:800; flex-shrink:0;
+    background: rgba(28,24,16,0.06); color:var(--muted);
+}
+.rank-badge.top1 { background:linear-gradient(135deg,#ffd76a,#c9a227); color:#4a3a05; }
+.rank-badge.top2 { background:linear-gradient(135deg,#dfe4ea,#b8bfc9); color:#33383f; }
+.rank-badge.top3 { background:linear-gradient(135deg,#e9b78a,#c17a3e); color:#3f2405; }
+.rank-bar-track { height:5px; border-radius:3px; background:rgba(28,24,16,0.07); margin-top:6px; overflow:hidden; }
+.rank-bar-fill { height:100%; border-radius:3px; background:linear-gradient(90deg,var(--gold),#e0bc6b); transition:width 0.5s ease; }
 /* Selector de estado del pedido (pestaña Ventas) */
 .estado-select {
     padding:6px 10px;
@@ -398,6 +480,12 @@ unset($_SESSION['flash']);
         <div class="sb-item" data-tab="agregar" onclick="irA('agregar', this)">
             <span class="sb-icon">➕</span> Agregar producto
         </div>
+        <a href="chat.php" class="sb-item" style="text-decoration:none;color:inherit">
+    <span class="sb-icon">💬</span> Mensajes
+    <?php if ($totalMensajesNoLeidos > 0): ?>
+    <span class="badge badge-gold" style="margin-left:auto"><?= $totalMensajesNoLeidos ?></span>
+    <?php endif; ?>
+    </a>
     </nav>
 
     <div class="sb-bottom">
@@ -607,7 +695,35 @@ unset($_SESSION['flash']);
         </div>
     </div>
 
-    <?php else: ?>
+<?php else: ?>
+
+    <?php if ($productoEstrella): ?>
+    <div class="estrella-card">
+        <div class="estrella-crown">👑 Producto estrella</div>
+        <?php if (!empty($productoEstrella['imagen']) && file_exists($productoEstrella['imagen'])): ?>
+            <img src="<?= htmlspecialchars($productoEstrella['imagen']) ?>" class="estrella-thumb">
+        <?php else: ?>
+            <div class="estrella-thumb">📦</div>
+        <?php endif; ?>
+        <div class="estrella-info">
+            <h3><?= htmlspecialchars($productoEstrella['nombre']) ?></h3>
+            <div class="estrella-stats">
+                <div>
+                    <div class="estrella-stat-num"><?= $productoEstrella['cantidad'] ?></div>
+                    <div class="estrella-stat-label">Unidades vendidas</div>
+                </div>
+                <div>
+                    <div class="estrella-stat-num">$<?= number_format($productoEstrella['total'], 0, ',', '.') ?></div>
+                    <div class="estrella-stat-label">Generado</div>
+                </div>
+                <div>
+                    <div class="estrella-stat-num"><?= $totalVentas > 0 ? round($productoEstrella['total'] / $totalVentas * 100) : 0 ?>%</div>
+                    <div class="estrella-stat-label">De tus ventas totales</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
 
     <!-- Mini gráfico últimos 7 días + Top productos -->
     <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:20px;margin-bottom:24px">
@@ -626,10 +742,14 @@ unset($_SESSION['flash']);
             </div>
         </div>
 
-        <div class="panel-card">
+                <div class="panel-card">
             <h2 style="font-size:16px;margin-bottom:16px">🏆 Más vendidos</h2>
-            <?php foreach ($masVendidos as $mv): ?>
-            <div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--border)">
+            <?php $maxCantidad = $masVendidos[0]['cantidad'] ?? 1; ?>
+            <?php foreach ($masVendidos as $i => $mv): ?>
+            <div class="rank-row">
+                <div class="rank-badge <?= $i === 0 ? 'top1' : ($i === 1 ? 'top2' : ($i === 2 ? 'top3' : '')) ?>">
+                    <?= $i + 1 ?>
+                </div>
                 <?php if (!empty($mv['imagen']) && file_exists($mv['imagen'])): ?>
                     <img src="<?= htmlspecialchars($mv['imagen']) ?>" class="prod-thumb">
                 <?php else: ?>
@@ -638,6 +758,9 @@ unset($_SESSION['flash']);
                 <div style="flex:1;min-width:0">
                     <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"><?= htmlspecialchars($mv['nombre']) ?></div>
                     <div style="font-size:12px;color:var(--muted)"><?= $mv['cantidad'] ?> vendidos</div>
+                    <div class="rank-bar-track">
+                        <div class="rank-bar-fill" style="width:<?= round($mv['cantidad'] / $maxCantidad * 100) ?>%"></div>
+                    </div>
                 </div>
                 <div style="font-weight:700;font-family:'Playfair Display',serif;color:var(--gold);font-size:13px;white-space:nowrap">
                     $<?= number_format($mv['total'], 0, ',', '.') ?>
@@ -747,92 +870,115 @@ unset($_SESSION['flash']);
         </div>
     </div>
 
-    <!-- Tab: Apariencia -->
-    <div id="tab-apariencia" class="tab-panel">
-        <div class="panel-card">
-            <form action="actualizar_tienda.php" method="POST" enctype="multipart/form-data">
-                <input type="hidden" name="seccion" value="apariencia">
-                <div class="form-grid">
-                    <div class="form-group full">
-                    <label>Plantilla de tu tienda</label>
+<!-- Tab: Apariencia -->
+<div id="tab-apariencia" class="tab-panel">
 
-                    <select name="plantilla">
-                    <option value="moderna"
-                    <?= ($tienda['plantilla'] ?? 'moderna') === 'moderna' ? 'selected' : '' ?>>
-                    Moderna
-                    </option>
+    <div class="panel-card">
 
-                    <option value="minimalista"
-                    <?= ($tienda['plantilla'] ?? 'moderna') === 'minimalista' ? 'selected' : '' ?>>
-                    Minimalista
-                    </option>
+        <form action="actualizar_tienda.php"
+              method="POST"
+              enctype="multipart/form-data">
 
-                    <option value="elegante"
-                    <?= ($tienda['plantilla'] ?? 'moderna') === 'elegante' ? 'selected' : '' ?>>
-                    Elegante
-                    </option>
+            <input type="hidden" name="seccion" value="apariencia">
 
-                    <option value="colorida"
-                    <?= ($tienda['plantilla'] ?? 'moderna') === 'colorida' ? 'selected' : '' ?>>
-                    Colorida
-                    </option>
-                    </select>
+            <div class="form-grid">
 
-                    <div style="font-size:11px;color:var(--muted);margin-top:5px">
-                    Elige el estilo visual que tendrá tu tienda pública.
-                    </div>
-                    </div>
-                    <div class="form-group">
-                        <label>Color principal de tu tienda</label>
-                        <div style="display:flex;gap:10px;align-items:center">
-                            <input type="color" name="color" value="<?= htmlspecialchars($tienda['color'] ?? '#c9a84c') ?>" id="colorPicker" style="width:60px;flex-shrink:0">
-                            <div style="font-size:13px;color:var(--muted)">Este color se aplica en los títulos, precios y botones de tu tienda pública.</div>
-                        </div>
-                        <!-- Colores rápidos -->
-                        <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
-                            <?php
-                            $colores = ['#c9a84c','#3b82f6','#10b981','#f43f5e','#8b5cf6','#f97316','#06b6d4','#ec4899'];
-                            foreach ($colores as $col):
-                            ?>
-                            <div onclick="document.getElementById('colorPicker').value='<?= $col ?>'"
-                                 style="width:28px;height:28px;border-radius:50%;background:<?= $col ?>;cursor:pointer;border:2px solid rgba(28,24,16,0.18);transition:transform 0.2s"
-                                 onmouseover="this.style.transform='scale(1.2)'"
-                                 onmouseout="this.style.transform='scale(1)'">
-                            </div>
-                            <?php endforeach; ?>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Logo de la tienda</label>
-                        <div style="display:flex;align-items:center;gap:14px">
-                            <?php if (!empty($tienda['logo'])): ?>
-                                <img src="<?= htmlspecialchars($tienda['logo']) ?>" style="width:56px;height:56px;border-radius:12px;object-fit:cover;border:1px solid var(--border)">
-                            <?php else: ?>
-                                <div style="width:56px;height:56px;border-radius:12px;background:var(--mid);display:flex;align-items:center;justify-content:center;font-size:24px;border:1px solid var(--border)">🏪</div>
-                            <?php endif; ?>
-                            <div style="flex:1">
-                                <input type="file" name="logo" accept="image/*" style="font-size:12px">
-                                <div style="font-size:11px;color:var(--muted);margin-top:4px">JPG, PNG, WEBP — máx 2MB</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="form-group full">
-                        <label>Banner de la tienda</label>
-                        <?php if (!empty($tienda['banner'])): ?>
-                            <img src="<?= htmlspecialchars($tienda['banner']) ?>" style="width:100%;height:100px;object-fit:cover;border-radius:10px;margin-bottom:10px;border:1px solid var(--border)">
-                        <?php endif; ?>
-                        <input type="file" name="banner" accept="image/*" style="font-size:12px">
-                        <div style="font-size:11px;color:var(--muted);margin-top:4px">Imagen ancha que aparece en la cabecera de tu tienda pública. Recomendado: 1200×300px</div>
-                    </div>
-                </div>
-                <div style="margin-top:20px">
-                    <button type="submit" class="btn btn-gold">🎨 Guardar apariencia</button>
-                </div>
-            </form>
-        </div>
+                <!-- Plantilla -->
+                <div class="form-group full">
+    <label>Plantilla de tu tienda</label>
+    <select name="plantilla" id="plantilla" required>
+        <?php
+        $plantillaActual = $tienda['plantilla'] ?? 'moderna';
+        $opciones = [
+            'moderna'     => '✨ Moderna',
+            'minimalista' => '◻️ Minimalista',
+            'elegante'    => '👑 Elegante',
+            'colorida'    => '🌈 Colorida',
+        ];
+        foreach ($opciones as $valor => $etiqueta):
+        ?>
+            <option value="<?= $valor ?>" <?= $plantillaActual === $valor ? 'selected' : '' ?>>
+                <?= $etiqueta ?>
+            </option>
+        <?php endforeach; ?>
+    </select>
+    <div style="font-size:13px;color:var(--muted);margin-top:6px">
+        Cambia el estilo visual completo de tu tienda pública (colores, tipografía, formas).
     </div>
+</div>
+
+
+                <!-- Color -->
+                <div class="form-group">
+                    <label>Color principal de tu tienda</label>
+
+                    <div style="display:flex; gap:10px; align-items:center;">
+
+                        <input
+                            type="color"
+                            name="color"
+                            value="<?= htmlspecialchars($tienda['color'] ?? '#c9a84c') ?>"
+                            style="width:60px; height:45px; padding:3px; cursor:pointer;"
+                        >
+
+                        <span style="font-size:13px; color:#777;">
+                            Selecciona el color principal.
+                        </span>
+
+                    </div>
+                </div>
+
+
+                <!-- Logo -->
+                <div class="form-group">
+                    <label>Logo de la tienda</label>
+
+                    <input
+                        type="file"
+                        name="logo"
+                        accept="image/*"
+                    >
+
+                    <?php if (!empty($tienda['logo'])): ?>
+                        <small style="display:block; margin-top:8px; color:#777;">
+                            Ya tienes un logo cargado.
+                        </small>
+                    <?php endif; ?>
+
+                </div>
+
+
+                <!-- Banner -->
+                <div class="form-group full">
+                    <label>Banner de la tienda</label>
+
+                    <input
+                        type="file"
+                        name="banner"
+                        accept="image/*"
+                    >
+
+                    <?php if (!empty($tienda['banner'])): ?>
+                        <small style="display:block; margin-top:8px; color:#777;">
+                            Ya tienes un banner cargado.
+                        </small>
+                    <?php endif; ?>
+
+                </div>
+
+            </div>
+
+            <div style="margin-top:20px">
+                <button type="submit" class="btn btn-gold">
+                    🎨 Guardar apariencia
+                </button>
+            </div>
+
+        </form>
+
+    </div>
+
+</div>
 
     <!-- Tab: Contacto & Redes -->
     <div id="tab-contacto" class="tab-panel">
