@@ -1,12 +1,57 @@
 <?php
 session_start();
 include("conexion.php");
+require 'vendor/autoload.php';
+require 'config_correo.php';
 
-$correo  = trim($_POST['correo'] ?? '');
-$mensaje = '';
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
+function enviarCorreoRecuperacion($destinatario, $nombre, $enlace) {
+    $mail = new PHPMailer(true);
+    try {
+        $mail->isSMTP();
+        $mail->Host       = SMTP_HOST;
+        $mail->SMTPAuth   = true;
+        $mail->Username   = SMTP_USER;
+        $mail->Password   = SMTP_PASS;
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+        $mail->Port       = SMTP_PORT;
+        $mail->CharSet    = 'UTF-8';
+
+        $mail->setFrom(SMTP_USER, SMTP_FROM_NAME);
+        $mail->addAddress($destinatario, $nombre);
+
+        $mail->isHTML(true);
+        $mail->Subject = 'Recupera tu contraseña — Caboré';
+        $mail->Body    = '
+            <div style="font-family:Arial,sans-serif;max-width:480px;margin:0 auto">
+              <h2 style="color:#b8923c">Caboré</h2>
+              <p>Hola ' . htmlspecialchars($nombre) . ',</p>
+              <p>Recibimos una solicitud para restablecer tu contraseña. Haz clic en el siguiente botón (válido por 1 hora):</p>
+              <p style="text-align:center;margin:28px 0">
+                <a href="' . $enlace . '" style="background:#b8923c;color:#fff;padding:14px 28px;border-radius:10px;text-decoration:none;font-weight:600">Restablecer contraseña</a>
+              </p>
+              <p style="font-size:12px;color:#888">Si no solicitaste esto, ignora este correo — tu contraseña seguirá siendo la misma.</p>
+            </div>
+        ';
+        $mail->AltBody = "Restablece tu contraseña en: " . $enlace;
+
+        $mail->send();
+        return true;
+    } catch (Exception $e) {
+        error_log("Error enviando correo de recuperación: " . $mail->ErrorInfo);
+        return false;
+    }
+}
+
+$correo   = trim($_POST['correo'] ?? '');
+$mensaje  = '';
+$es_error = false;
 
 if ($correo === '' || !filter_var($correo, FILTER_VALIDATE_EMAIL)) {
-    $mensaje = "Ingresa un correo válido.";
+    $mensaje  = "Ingresa un correo válido.";
+    $es_error = true;
 } else {
     $stmt = $conn->prepare("SELECT id, nombre FROM usuarios WHERE correo = ?");
     $stmt->bind_param("s", $correo);
@@ -25,17 +70,7 @@ if ($correo === '' || !filter_var($correo, FILTER_VALIDATE_EMAIL)) {
         $upd->execute();
 
         $enlace = "http://localhost/CABORE-GIT/restablecer_password.php?token=" . $token;
-
-        $asunto  = "Caboré — Recupera tu contraseña";
-        $cuerpo  = "Hola " . $usuario['nombre'] . ",\n\nHaz clic en el siguiente enlace para restablecer tu contraseña (válido por 1 hora):\n" . $enlace . "\n\nSi no solicitaste esto, ignora este correo.";
-        $headers = "From: no-reply@cabore.co";
-
-        @mail($correo, $asunto, $cuerpo, $headers);
-
-        // ⚠️ SOLO PARA DESARROLLO LOCAL: mail() normalmente no funciona en XAMPP
-        // sin configurar un SMTP. Mostramos el enlace en pantalla para poder probar.
-        // Bórralo cuando pases esto a un hosting real con correo configurado.
-        $_SESSION['debug_link'] = $enlace;
+        enviarCorreoRecuperacion($correo, $usuario['nombre'], $enlace);
     }
 }
 ?>
@@ -43,25 +78,30 @@ if ($correo === '' || !filter_var($correo, FILTER_VALIDATE_EMAIL)) {
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Caboré — Recuperación enviada</title>
-<link rel="stylesheet" href="css/login.css">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/recuperacion.css">
 </head>
 <body>
-<div class="page" style="display:flex;align-items:center;justify-content:center;min-height:100vh">
-  <div class="panel-area" style="max-width:420px;text-align:center">
-    <div class="panel-title">📩 Revisa tu correo</div>
-    <p class="panel-sub"><?= htmlspecialchars($mensaje) ?></p>
 
-    <?php if (!empty($_SESSION['debug_link'])): ?>
-      <p style="font-size:12px;color:#999;margin-top:20px">
-        Modo desarrollo — como el correo local no está configurado, aquí está el enlace:<br>
-        <a href="<?= htmlspecialchars($_SESSION['debug_link']) ?>"><?= htmlspecialchars($_SESSION['debug_link']) ?></a>
-      </p>
-      <?php unset($_SESSION['debug_link']); ?>
-    <?php endif; ?>
+<div class="noise"></div>
+<div class="bg-glow a"></div>
+<div class="bg-glow b"></div>
 
-    <a href="login.html" class="btn-submit btn--blue" style="display:inline-block;margin-top:20px;text-decoration:none">← Volver a iniciar sesión</a>
-  </div>
+<div class="recover-card" style="text-align:center">
+  <?php if ($es_error): ?>
+    <div class="recover-icon" style="margin:0 auto 20px;background:linear-gradient(135deg,#f87171,#dc2626)">⚠️</div>
+    <div class="recover-title">Algo salió mal</div>
+    <p class="recover-sub"><?= htmlspecialchars($mensaje) ?></p>
+    <a href="olvide_password.html" class="btn-gold" style="text-decoration:none">Intentar de nuevo</a>
+  <?php else: ?>
+    <div class="recover-icon" style="margin:0 auto 20px;background:linear-gradient(135deg,#34d399,#0f9d63)">📩</div>
+    <div class="recover-title">Revisa tu correo</div>
+    <p class="recover-sub"><?= htmlspecialchars($mensaje) ?></p>
+    <a href="login.html" class="btn-gold" style="text-decoration:none">← Volver a iniciar sesión</a>
+  <?php endif; ?>
 </div>
+
 </body>
 </html>

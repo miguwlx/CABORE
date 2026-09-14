@@ -269,7 +269,7 @@ unset($_SESSION['flash']);
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Caboré — Panel Administrador</title>
+<title>Caboré — Administrador</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/emprendedor.css">
 <link rel="stylesheet" href="css/admin.css">
@@ -335,7 +335,7 @@ unset($_SESSION['flash']);
 <div id="resumen" class="seccion activa">
 
     <div class="hero-card">
-        <h1>Panel de <em>administrador</em></h1>
+        <h1>Administrador</h1>
         <p>Gestiona la confiabilidad del marketplace y genera reportes de ventas y facturas.</p>
     </div>
 

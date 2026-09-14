@@ -138,6 +138,93 @@ foreach ($ventas as $v) {
 $pedidosAgrupados = array_values($pedidosAgrupados);
 usort($pedidosAgrupados, fn($a, $b) => strtotime($b['creado_en']) <=> strtotime($a['creado_en']));
 
+// ══════════ REPORTES DE LA TIENDA ══════════
+$estados_validos = ['pendiente', 'confirmado', 'enviado', 'entregado', 'cancelado'];
+$desde    = $_GET['desde']  ?? date('Y-m-d', strtotime('-30 days'));
+$hasta    = $_GET['hasta']  ?? date('Y-m-d');
+$estado_f = $_GET['estado'] ?? '';
+
+$whereR  = ["pr.tienda_id = ?", "p.creado_en >= ?", "p.creado_en <= ?"];
+$paramsR = [$tienda_id, "$desde 00:00:00", "$hasta 23:59:59"];
+$typesR  = "iss";
+if ($estado_f !== '' && in_array($estado_f, $estados_validos, true)) {
+    $whereR[] = "p.estado = ?"; $paramsR[] = $estado_f; $typesR .= "s";
+}
+
+$sqlRep = "
+    SELECT pi.cantidad, pi.precio_unitario, pi.producto_id, p.id AS pedido_id, pr.nombre AS producto_nombre
+    FROM pedido_items pi
+    JOIN pedidos p    ON p.id = pi.pedido_id
+    JOIN productos pr ON pr.id = pi.producto_id
+    WHERE " . implode(' AND ', $whereR) . "
+";
+$stmtRep = $conn->prepare($sqlRep);
+$stmtRep->bind_param($typesR, ...$paramsR);
+$stmtRep->execute();
+$filasRep = $stmtRep->get_result()->fetch_all(MYSQLI_ASSOC);
+
+$totalVentasP  = 0;
+$pedidosSetP   = [];
+$topProductosP = [];
+foreach ($filasRep as $f) {
+    $sub = $f['cantidad'] * $f['precio_unitario'];
+    $totalVentasP += $sub;
+    $pedidosSetP[$f['pedido_id']] = true;
+    $pid = $f['producto_id'];
+    if (!isset($topProductosP[$pid])) $topProductosP[$pid] = ['nombre' => $f['producto_nombre'], 'cantidad' => 0, 'total' => 0];
+    $topProductosP[$pid]['cantidad'] += $f['cantidad'];
+    $topProductosP[$pid]['total']    += $sub;
+}
+usort($topProductosP, fn($a, $b) => $b['total'] <=> $a['total']);
+$totalPedidosP = count($pedidosSetP);
+$ticketPromP   = $totalPedidosP > 0 ? $totalVentasP / $totalPedidosP : 0;
+
+// Ventas de los últimos 14 días de esta tienda (para el mini gráfico)
+$ventasDiaP = [];
+$stmtDias = $conn->prepare("
+    SELECT DATE(p.creado_en) AS dia, SUM(pi.cantidad * pi.precio_unitario) AS total
+    FROM pedido_items pi
+    JOIN pedidos p ON p.id = pi.pedido_id
+    JOIN productos pr ON pr.id = pi.producto_id
+    WHERE pr.tienda_id = ? AND p.creado_en >= DATE_SUB(NOW(), INTERVAL 14 DAY) AND p.estado != 'cancelado'
+    GROUP BY DATE(p.creado_en)
+");
+$stmtDias->bind_param("i", $tienda_id);
+$stmtDias->execute();
+$resDiasP = $stmtDias->get_result();
+while ($r = $resDiasP->fetch_assoc()) { $ventasDiaP[$r['dia']] = (float) $r['total']; }
+$ultimos14P = [];
+for ($i = 13; $i >= 0; $i--) {
+    $dia = date('Y-m-d', strtotime("-$i days"));
+    $ultimos14P[] = ['fecha' => $dia, 'label' => date('d/m', strtotime($dia)), 'total' => $ventasDiaP[$dia] ?? 0];
+}
+$maxVentaDiaP = max(array_column($ultimos14P, 'total')) ?: 1;
+
+// ══════════ FACTURAS DE LA TIENDA ══════════
+$busq_id_f = trim($_GET['f_id'] ?? '');
+$whereF  = ["pr.tienda_id = ?"];
+$paramsF = [$tienda_id];
+$typesF  = "i";
+if ($busq_id_f !== '') {
+    $whereF[]  = "p.id = ?";
+    $paramsF[] = (int) preg_replace('/\D/', '', $busq_id_f);
+    $typesF   .= "i";
+}
+$sqlFact = "
+    SELECT DISTINCT p.id, p.total, p.estado, p.creado_en, u.nombre AS cliente_nombre
+    FROM pedido_items pi
+    JOIN pedidos p    ON p.id = pi.pedido_id
+    JOIN productos pr ON pr.id = pi.producto_id
+    JOIN usuarios u   ON u.id = p.usuario_id
+    WHERE " . implode(' AND ', $whereF) . "
+    ORDER BY p.creado_en DESC
+    LIMIT 100
+";
+$stmtFact = $conn->prepare($sqlFact);
+$stmtFact->bind_param($typesF, ...$paramsF);
+$stmtFact->execute();
+$facturasTienda = $stmtFact->get_result()->fetch_all(MYSQLI_ASSOC);
+
 // Mensaje flash
 $flash = $_SESSION['flash'] ?? null;
 unset($_SESSION['flash']);
@@ -390,6 +477,12 @@ unset($_SESSION['flash']);
             <?php if ($totalPendientes > 0): ?>
             <span class="badge badge-gold" style="margin-left:auto"><?= $totalPendientes ?></span>
             <?php endif; ?>
+        </div>
+        <div class="sb-item" data-tab="reportes" onclick="irA('reportes', this)">
+            <span class="sb-icon">📈</span> Reportes
+        </div>
+        <div class="sb-item" data-tab="facturas" onclick="irA('facturas', this)">
+            <span class="sb-icon">🧾</span> Facturas
         </div>
         <div class="sb-item" data-tab="productos" onclick="irA('productos', this)">
             <span class="sb-icon">📦</span> Productos
@@ -704,6 +797,122 @@ unset($_SESSION['flash']);
     <?php endif; ?>
 
 </div><!-- /ventas -->
+
+<!-- ══════════ REPORTES ══════════ -->
+<div id="reportes" class="seccion">
+    <div class="sec-header">
+        <h2>📈 Reportes de mi tienda</h2>
+    </div>
+
+    <form class="filter-bar" method="GET">
+        <input type="hidden" name="tab" value="reportes">
+        <div class="form-group">
+            <label>Desde</label>
+            <input type="date" name="desde" value="<?= htmlspecialchars($desde) ?>">
+        </div>
+        <div class="form-group">
+            <label>Hasta</label>
+            <input type="date" name="hasta" value="<?= htmlspecialchars($hasta) ?>">
+        </div>
+        <div class="form-group">
+            <label>Estado del pedido</label>
+            <select name="estado">
+                <option value="">Todos</option>
+                <?php foreach ($estados_validos as $e): ?>
+                    <option value="<?= $e ?>" <?= $estado_f === $e ? 'selected' : '' ?>><?= ucfirst($e) ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <button type="submit" class="btn btn-gold">Filtrar</button>
+    </form>
+
+    <div class="stats">
+        <div class="stat-card">
+            <div class="stat-label">Ventas en el período</div>
+            <div class="stat-value" style="font-size:20px;margin-top:4px">$<?= number_format($totalVentasP, 0, ',', '.') ?></div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Pedidos</div>
+            <div class="stat-value"><?= $totalPedidosP ?></div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">Ticket promedio</div>
+            <div class="stat-value" style="font-size:20px;margin-top:4px">$<?= number_format($ticketPromP, 0, ',', '.') ?></div>
+        </div>
+    </div>
+
+    <div class="panel-card">
+        <h2 style="font-size:16px;margin-bottom:18px">Ventas de los últimos 14 días</h2>
+        <div style="display:flex;align-items:flex-end;gap:6px;height:140px">
+            <?php foreach ($ultimos14P as $d): ?>
+            <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">
+                <div style="font-size:9px;color:var(--muted);margin-bottom:6px"><?= $d['total'] > 0 ? '$' . number_format($d['total'], 0, ',', '.') : '' ?></div>
+                <div style="width:100%;max-width:28px;border-radius:6px 6px 0 0;background:linear-gradient(180deg,var(--gold),#a8832a);height:<?= max(4, round($d['total'] / $maxVentaDiaP * 100)) ?>%"></div>
+                <div style="font-size:10px;color:var(--muted);margin-top:8px"><?= $d['label'] ?></div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+
+    <div class="panel-card">
+        <h2 style="font-size:16px">🏆 Top productos del período</h2>
+        <?php if (empty($topProductosP)): ?>
+            <div class="empty-state" style="padding:20px"><p>Sin ventas en este período.</p></div>
+        <?php else: foreach (array_slice($topProductosP, 0, 5) as $mv): ?>
+            <div style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border)">
+                <div>
+                    <div style="font-weight:600;font-size:13px"><?= htmlspecialchars($mv['nombre']) ?></div>
+                    <div style="font-size:12px;color:var(--muted)"><?= $mv['cantidad'] ?> vendidos</div>
+                </div>
+                <div style="font-weight:700;font-family:'Playfair Display',serif;color:var(--gold);font-size:13px">$<?= number_format($mv['total'], 0, ',', '.') ?></div>
+            </div>
+        <?php endforeach; endif; ?>
+    </div>
+</div><!-- /reportes -->
+
+<!-- ══════════ FACTURAS ══════════ -->
+<div id="facturas" class="seccion">
+    <div class="sec-header">
+        <h2>🧾 Facturas</h2>
+    </div>
+
+    <form class="factura-search" method="GET">
+        <input type="hidden" name="tab" value="facturas">
+        <input type="text" name="f_id" placeholder="Buscar por # de pedido" value="<?= htmlspecialchars($busq_id_f) ?>">
+        <button type="submit" class="btn btn-gold btn-sm">Buscar</button>
+    </form>
+
+    <div class="panel-card" style="padding:0;overflow:hidden">
+        <table class="prod-table">
+            <thead>
+                <tr>
+                    <th>Factura</th>
+                    <th>Cliente</th>
+                    <th>Fecha</th>
+                    <th>Estado</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (empty($facturasTienda)): ?>
+                <tr><td colspan="5"><div class="empty-state"><p>Todavía no tienes ventas facturadas.</p></div></td></tr>
+                <?php else: foreach ($facturasTienda as $f): ?>
+                <tr>
+                    <td style="font-weight:600">FAC-<?= str_pad($f['id'], 6, '0', STR_PAD_LEFT) ?></td>
+                    <td><?= htmlspecialchars($f['cliente_nombre']) ?></td>
+                    <td><?= date('d/m/Y H:i', strtotime($f['creado_en'])) ?></td>
+                    <td><span class="badge badge-<?= $f['estado'] === 'entregado' ? 'green' : ($f['estado'] === 'cancelado' ? 'red' : 'gold') ?>"><?= ucfirst($f['estado']) ?></span></td>
+                    <td><a href="factura.php?id=<?= $f['id'] ?>" target="_blank" class="btn btn-outline btn-sm">Ver factura</a></td>
+                </tr>
+                <?php endforeach; endif; ?>
+            </tbody>
+        </table>
+    </div>
+
+    <p style="font-size:12px;color:var(--muted);margin-top:10px">
+        Nota: si un cliente compró productos de varias tiendas en un mismo pedido, la factura solo te muestra los productos que le pertenecen a tu tienda.
+    </p>
+</div><!-- /facturas -->
 
 <!-- ══════════ TIENDA ══════════ -->
 <div id="tienda" class="seccion">

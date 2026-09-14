@@ -6,12 +6,26 @@
 session_start();
 include("conexion.php");
 
-if (!isset($_SESSION['usuario_id']) || $_SESSION['rol'] !== 'administrador') {
+if (!isset($_SESSION['usuario_id']) || !in_array($_SESSION['rol'], ['administrador', 'emprendedor'], true)) {
     header("Location: login.html"); exit();
 }
 
+$es_admin = $_SESSION['rol'] === 'administrador';
+$usuario_sesion_id = (int) $_SESSION['usuario_id'];
+
 $pedido_id = (int) ($_GET['id'] ?? 0);
 if ($pedido_id <= 0) { die('Pedido inválido.'); }
+
+// Si es emprendedor, obtenemos el id de su tienda para filtrar la factura
+$tienda_emprendedor_id = 0;
+if (!$es_admin) {
+    $stmtTE = $conn->prepare("SELECT id FROM tiendas WHERE usuario_id = ?");
+    $stmtTE->bind_param("i", $usuario_sesion_id);
+    $stmtTE->execute();
+    $tiendaE = $stmtTE->get_result()->fetch_assoc();
+    if (!$tiendaE) { die('No tienes una tienda asociada.'); }
+    $tienda_emprendedor_id = (int) $tiendaE['id'];
+}
 
 $stmtP = $conn->prepare("
     SELECT p.*, u.nombre AS cliente_nombre, u.correo AS cliente_correo, u.telefono AS cliente_telefono
@@ -25,16 +39,32 @@ $pedido = $stmtP->get_result()->fetch_assoc();
 
 if (!$pedido) { die('Pedido no encontrado.'); }
 
-$stmtI = $conn->prepare("
-    SELECT pi.cantidad, pi.precio_unitario, pr.nombre AS producto_nombre, t.nombre AS tienda_nombre
-    FROM pedido_items pi
-    JOIN productos pr ON pr.id = pi.producto_id
-    JOIN tiendas t ON t.id = pr.tienda_id
-    WHERE pi.pedido_id = ?
-");
-$stmtI->bind_param("i", $pedido_id);
+if ($es_admin) {
+    $stmtI = $conn->prepare("
+        SELECT pi.cantidad, pi.precio_unitario, pr.nombre AS producto_nombre, t.nombre AS tienda_nombre
+        FROM pedido_items pi
+        JOIN productos pr ON pr.id = pi.producto_id
+        JOIN tiendas t ON t.id = pr.tienda_id
+        WHERE pi.pedido_id = ?
+    ");
+    $stmtI->bind_param("i", $pedido_id);
+} else {
+    // El emprendedor solo ve los productos que pertenecen a SU tienda dentro de este pedido
+    $stmtI = $conn->prepare("
+        SELECT pi.cantidad, pi.precio_unitario, pr.nombre AS producto_nombre, t.nombre AS tienda_nombre
+        FROM pedido_items pi
+        JOIN productos pr ON pr.id = pi.producto_id
+        JOIN tiendas t ON t.id = pr.tienda_id
+        WHERE pi.pedido_id = ? AND pr.tienda_id = ?
+    ");
+    $stmtI->bind_param("ii", $pedido_id, $tienda_emprendedor_id);
+}
 $stmtI->execute();
 $items = $stmtI->get_result()->fetch_all(MYSQLI_ASSOC);
+
+if (!$es_admin && empty($items)) {
+    die('Esta factura no tiene productos de tu tienda.');
+}
 
 $numero_factura = 'FAC-' . str_pad($pedido_id, 6, '0', STR_PAD_LEFT);
 $subtotal = array_sum(array_map(fn($i) => $i['cantidad'] * $i['precio_unitario'], $items));
