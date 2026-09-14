@@ -21,6 +21,15 @@ $stmt = $pdo->prepare("SELECT * FROM usuarios WHERE id = ?");
 $stmt->execute([$usuario_id]);
 $usuario = $stmt->fetch();
 
+$stmtNoLeidosCli = $pdo->prepare("
+    SELECT COUNT(*) AS n
+    FROM mensajes m
+    JOIN conversaciones c ON c.id = m.conversacion_id
+    WHERE c.cliente_id = ? AND m.emisor_id != ? AND m.leido = 0
+");
+$stmtNoLeidosCli->execute([$usuario_id, $usuario_id]);
+$totalMensajesNoLeidosCli = $stmtNoLeidosCli->fetch()['n'] ?? 0;
+
 // Obtener categorías
 $categorias = $pdo->query("SELECT * FROM categorias ORDER BY nombre")->fetchAll();
 
@@ -935,7 +944,15 @@ button { cursor: pointer; font-family: var(--font-body); }
                 <a href="perfil.php"><i class="far fa-user"></i> <?= htmlspecialchars($usuario['nombre']) ?></a>
                 <a href="perfil.php"><i class="fas fa-map-marker-alt"></i> Mi perfil y dirección</a>
                 <a href="mis_pedidos.php"><i class="fas fa-box"></i> Mis pedidos</a>
-                <a href="favoritos.php"><i class="far fa-heart"></i> Favoritos</a>
+<a href="chat.php" style="justify-content:space-between">
+    <span><i class="far fa-comment-dots"></i> Mensajes</span>
+    <?php if ($totalMensajesNoLeidosCli > 0): ?>
+    <span style="background:var(--accent);color:#fff;font-size:11px;font-weight:700;border-radius:20px;min-width:18px;height:18px;display:flex;align-items:center;justify-content:center;padding:0 5px">
+        <?= $totalMensajesNoLeidosCli ?>
+    </span>
+    <?php endif; ?>
+</a>
+<a href="favoritos.php"><i class="far fa-heart"></i> Favoritos</a>
                 <hr>
                 <a href="logout.php" class="danger"><i class="fas fa-sign-out-alt"></i> Cerrar sesión</a>
             </div>
@@ -1027,9 +1044,11 @@ button { cursor: pointer; font-family: var(--font-body); }
                     </button>
                 </div>
                 <div class="prod-body">
-                    <div class="prod-store">
-                        <span class="prod-store-dot" style="background:<?= htmlspecialchars($s['tienda_color'] ?: '#888') ?>"></span>
-                        <?= htmlspecialchars($s['tienda_nombre']) ?>
+                    <div class="prod-store"
+                     onclick="event.stopPropagation(); window.location='tienda.php?id=<?= $s['tienda_id'] ?>'"
+                    style="cursor:pointer" title="Ver tienda <?= htmlspecialchars($s['tienda_nombre']) ?>">
+                    <span class="prod-store-dot" style="background:<?= htmlspecialchars($s['tienda_color'] ?: '#888') ?>"></span>
+                    <?= htmlspecialchars($s['tienda_nombre']) ?>
                     </div>
                     <div class="prod-name"><?= htmlspecialchars($s['nombre']) ?></div>
                     <div class="prod-price-row">
@@ -1324,7 +1343,9 @@ function openModal(p) {
     document.getElementById('modal-cat').textContent  = p.categoria_nombre || '';
     document.getElementById('modal-name').textContent = p.nombre;
     document.getElementById('modal-store').innerHTML  =
-        `<i class="fas fa-store"></i> ${p.tienda_nombre}`;
+    `<a href="tienda.php?id=${p.tienda_id}" style="color:inherit;text-decoration:underline dotted">
+        <i class="fas fa-store"></i> ${p.tienda_nombre}
+    </a>`;
     document.getElementById('modal-desc').textContent =
         p.descripcion || 'Sin descripción disponible.';
 
