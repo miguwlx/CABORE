@@ -9,6 +9,61 @@ if (!isset($_SESSION['usuario_id']) || $_SESSION['rol'] !== 'cliente') {
 }
 
 $usuario_id = $_SESSION['usuario_id'];
+// =============================================
+// EXPERIENCIA DEL CLIENTE
+// =============================================
+
+$stmt_experiencia = $pdo->prepare("
+    SELECT experiencia, nivel
+    FROM experiencia_clientes
+    WHERE usuario_id = ?
+");
+$stmt_experiencia->execute([$usuario_id]);
+
+$datos_experiencia = $stmt_experiencia->fetch();
+
+if ($datos_experiencia) {
+    $experiencia_cliente = (int) $datos_experiencia['experiencia'];
+    $nivel_cliente = (int) $datos_experiencia['nivel'];
+} else {
+    $experiencia_cliente = 0;
+    $nivel_cliente = 1;
+}
+// =============================================
+// ACTUALIZAR EXPERIENCIA DESDE JAVA
+// =============================================
+
+$url_java = "http://localhost:8080/experiencia?accion=catalogo&experiencia=" . $experiencia_cliente;
+
+$respuesta_java = @file_get_contents($url_java);
+
+if ($respuesta_java !== false) {
+
+    $datos_java = json_decode($respuesta_java, true);
+
+    if (isset($datos_java['resultado'])) {
+
+        $resultado = explode(',', $datos_java['resultado']);
+
+        $nueva_experiencia = (int) $resultado[0];
+        $nuevo_nivel = (int) $resultado[1];
+
+        $actualizar_experiencia = $pdo->prepare("
+            UPDATE experiencia_clientes
+            SET experiencia = ?, nivel = ?, actualizado_en = NOW()
+            WHERE usuario_id = ?
+        ");
+
+        $actualizar_experiencia->execute([
+            $nueva_experiencia,
+            $nuevo_nivel,
+            $usuario_id
+        ]);
+
+        $experiencia_cliente = $nueva_experiencia;
+        $nivel_cliente = $nuevo_nivel;
+    }
+}
 
 // ── Carrito SIEMPRE atado al usuario actual (evita que se mezcle entre cuentas) ──
 if (!isset($_SESSION['carrito']) || !isset($_SESSION['carrito_usuario_id']) || $_SESSION['carrito_usuario_id'] !== $usuario_id) {
