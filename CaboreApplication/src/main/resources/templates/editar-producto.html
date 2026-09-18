@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Editar producto - Caboré</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/CSS/editar_producto.css}">
+    <style>
+        .aviso-error { padding: 12px 16px; border-radius: 10px; margin-bottom: 18px; font-size: 14px;
+                       background: rgba(239,68,68,0.10); border: 1px solid rgba(239,68,68,0.30); color: #b42318; }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+
+    <div class="box">
+        <span class="logo">Cabo<span>ré</span></span>
+        <h2>Editar producto</h2>
+        <p class="subtitle">Los cambios se ven de inmediato en tu tienda.</p>
+
+        <div class="aviso-error" th:if="${error}" th:text="${error}"></div>
+
+        <form th:action="@{/emprendedor/productos/{id}(id=${producto.id})}" method="post">
+            <div class="form-group">
+                <label for="nombre">Nombre</label>
+                <input type="text" id="nombre" name="nombre" th:value="${producto.nombre}"
+                       required minlength="2" maxlength="150">
+            </div>
+            <div class="form-group">
+                <label for="descripcion">Descripción</label>
+                <textarea id="descripcion" name="descripcion" th:text="${producto.descripcion}"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="precio">Precio (COP)</label>
+                <input type="number" id="precio" name="precio" th:value="${producto.precio}"
+                       required min="1" step="any">
+            </div>
+            <div class="form-group">
+                <label for="stock">Unidades disponibles</label>
+                <input type="number" id="stock" name="stock" th:value="${producto.stock}"
+                       required min="0" step="1">
+            </div>
+
+            <div class="btn-row">
+                <button type="submit" class="btn btn-gold">Guardar cambios</button>
+                <a class="btn btn-ghost" th:href="@{/emprendedor}">Cancelar</a>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

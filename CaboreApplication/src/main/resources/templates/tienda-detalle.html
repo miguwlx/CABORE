@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="${tienda.nombre} + ' - Caboré'">Tienda</title>
+    <link rel="stylesheet" th:href="@{/CSS/cliente.css}">
+</head>
+<body>
+    <header>
+        <h1 th:text="${tienda.nombre}">Nombre de la tienda</h1>
+        <a th:href="@{/cliente}">← Volver al catálogo</a>
+        <a th:href="@{/logout}">Cerrar Sesión</a>
+    </header>
+    <main>
+        <p th:text="${tienda.descripcion}">Descripción</p>
+
+        <h2>Productos</h2>
+        <p th:if="${#lists.isEmpty(productos)}">
+            Esta tienda todavía no tiene productos publicados.
+        </p>
+
+        <div th:each="p : ${productos}" style="border:1px solid #ddd; padding:12px; margin-bottom:10px; border-radius:8px;">
+            <h3 th:text="${p.nombre}">Producto</h3>
+            <p th:text="${p.descripcion}">Descripción</p>
+            <p th:text="'$' + ${#numbers.formatDecimal(p.precio, 1, 'POINT', 0, 'COMMA')}">Precio</p>
+            <p th:text="'Stock: ' + ${p.stock}">Stock</p>
+        </div>
+    </main>
+</body>
+</html>

@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Catálogo - Caboré</title>
+    <link rel="stylesheet" th:href="@{/CSS/cliente.css}">
+</head>
+<body>
+    <header>
+        <h1>Catálogo de Productos</h1>
+        <a th:href="@{/logout}">Cerrar Sesión</a>
+    </header>
+    <main>
+        <h2>Explora tiendas y emprendimientos</h2>
+
+        <p th:if="${#lists.isEmpty(tiendas)}">
+            Todavía no hay tiendas activas. Vuelve pronto.
+        </p>
+
+        <div th:each="t : ${tiendas}" style="border:1px solid #ddd; padding:16px; margin-bottom:12px; border-radius:8px;">
+            <h3 th:text="${t.nombre}">Nombre de la tienda</h3>
+            <p th:text="${t.descripcion}">Descripción</p>
+            <p th:if="${t.ciudad}" th:text="'Ciudad: ' + ${t.ciudad}"></p>
+            <a th:href="@{/tienda/{id}(id=${t.id})}">Ver tienda →</a>
+        </div>
+    </main>
+</body>
+</html>

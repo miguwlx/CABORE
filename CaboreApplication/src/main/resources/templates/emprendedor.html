@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mi tienda - Caboré</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/CSS/emprendedor.css}">
+    <style>
+        .sb-item { text-decoration: none; }
+        .aviso { padding: 12px 16px; border-radius: 10px; margin-bottom: 20px; font-size: 14px; }
+        .aviso-ok    { background: rgba(34,139,34,0.10); border: 1px solid rgba(34,139,34,0.30); color: #1e6b1e; }
+        .aviso-error { background: rgba(239,68,68,0.10); border: 1px solid rgba(239,68,68,0.30); color: #b42318; }
+        .product-desc { color: var(--muted); font-size: 13px; margin: 4px 0 8px; }
+        .stock-bajo { color: #b42318; font-weight: 600; }
+        .product-actions form { margin: 0; }
+        html { scroll-behavior: smooth; }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+
+    <aside class="sidebar">
+        <div class="sb-logo">Cabo<span>ré</span></div>
+
+        <div class="sb-user">
+            <div class="sb-avatar">🛍️</div>
+            <div class="sb-user-name" th:text="${nombreUsuario}">Nombre</div>
+            <span class="sb-user-role">Emprendedor</span>
+        </div>
+
+        <nav class="sb-nav">
+            <a class="sb-item active" href="#productos"><span class="sb-icon">📦</span> Mis productos</a>
+            <a class="sb-item" href="#nuevo"><span class="sb-icon">➕</span> Nuevo producto</a>
+        </nav>
+
+        <div class="sb-bottom">
+            <a class="btn-logout" th:href="@{/logout}">🚪 Cerrar sesión</a>
+        </div>
+    </aside>
+
+    <main class="main">
+        <div class="seccion activa">
+
+            <div class="tienda-preview">
+                <div class="t-info">
+                    <h3>
+                        <span class="t-dot" th:style="'background:' + ${tienda.color}"></span>
+                        <span th:text="${tienda.nombre}">Mi tienda</span>
+                    </h3>
+                    <p th:text="${tienda.descripcion}">Descripción</p>
+                </div>
+            </div>
+
+            <div class="stats">
+                <div class="stat-card">
+                    <div class="stat-label">Productos</div>
+                    <div class="stat-value" th:text="${totalProductos}">0</div>
+                    <div class="stat-sub">publicados en tu tienda</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-label">Sin stock</div>
+                    <div class="stat-value" th:text="${sinStock}">0</div>
+                    <div class="stat-sub">necesitan reposición</div>
+                </div>
+            </div>
+
+            <div class="aviso aviso-ok"    th:if="${ok}"    th:text="${ok}"></div>
+            <div class="aviso aviso-error" th:if="${error}" th:text="${error}"></div>
+
+            <!-- ── LISTA ── -->
+            <section id="productos" class="panel-card">
+                <div class="sec-header">
+                    <h2>Mis productos</h2>
+                </div>
+
+                <div class="empty-state" th:if="${#lists.isEmpty(productos)}">
+                    <span>📦</span>
+                    Aún no tienes productos. Publica el primero desde el formulario de abajo.
+                </div>
+
+                <div class="product-grid" th:unless="${#lists.isEmpty(productos)}">
+                    <div class="product-card" th:each="p : ${productos}">
+                        <div class="product-img-placeholder">📦</div>
+                        <div class="product-body">
+                            <div class="product-name" th:text="${p.nombre}">Producto</div>
+                            <div class="product-desc" th:if="${p.descripcion != null}" th:text="${p.descripcion}">Descripción</div>
+                            <div class="product-price"
+                                 th:text="'$' + ${#numbers.formatDecimal(p.precio, 1, 'POINT', 0, 'COMMA')}">$0</div>
+                            <div class="product-desc"
+                                 th:classappend="${p.stock == null or p.stock <= 0} ? 'stock-bajo'"
+                                 th:text="${p.stock == null or p.stock <= 0} ? 'Sin stock' : 'Stock: ' + ${p.stock}">Stock</div>
+
+                            <div class="product-actions">
+                                <a class="btn btn-outline btn-sm"
+                                   th:href="@{/emprendedor/productos/{id}/editar(id=${p.id})}">Editar</a>
+
+                                <form th:action="@{/emprendedor/productos/{id}/eliminar(id=${p.id})}" method="post"
+                                      onsubmit="return confirm('¿Eliminar este producto?');">
+                                    <button type="submit" class="btn btn-red btn-sm">Eliminar</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ── NUEVO ── -->
+            <section id="nuevo" class="panel-card">
+                <h2>Nuevo producto</h2>
+                <form th:action="@{/emprendedor/productos}" method="post">
+                    <div class="form-grid">
+                        <div class="form-group full">
+                            <label for="nombre">Nombre</label>
+                            <input type="text" id="nombre" name="nombre" required minlength="2" maxlength="150"
+                                   placeholder="Ej: Mochila wayuu mediana">
+                        </div>
+                        <div class="form-group full">
+                            <label for="descripcion">Descripción</label>
+                            <textarea id="descripcion" name="descripcion"
+                                      placeholder="Materiales, tamaño, detalles que el cliente debe saber"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="precio">Precio (COP)</label>
+                            <input type="number" id="precio" name="precio" required min="1" step="any"
+                                   placeholder="25000">
+                        </div>
+                        <div class="form-group">
+                            <label for="stock">Unidades disponibles</label>
+                            <input type="number" id="stock" name="stock" required min="0" step="1" value="1">
+                        </div>
+                    </div>
+                    <div style="margin-top:20px;">
+                        <button type="submit" class="btn btn-gold">Publicar producto</button>
+                    </div>
+                </form>
+            </section>
+
+        </div>
+    </main>
+</body>
+</html>
