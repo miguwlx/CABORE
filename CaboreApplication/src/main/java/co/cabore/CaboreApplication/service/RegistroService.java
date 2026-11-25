@@ -29,7 +29,7 @@ public class RegistroService {
         if (contrasena.length() < 6) {
             throw new RegistroException("La contraseña debe tener al menos 6 caracteres.");
         }
-        if (usuarios.existsByCorreo(correo)) {
+        if (usuarios.existsByCorreo(correo) || usuarios.existsByCorreoIgnoreCase(correo)) {
             throw new RegistroException("Este correo ya está registrado.");
         }
 

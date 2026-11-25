@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Caboré — Mensajes</title>
+    <link th:if="${esEmprendedor}" href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <th:block th:unless="${esEmprendedor}">
+        <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,600&display=swap" rel="stylesheet">
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    </th:block>
+    <style>
+        body.tema-emprendedor {
+            --bg: #faf7f0;
+            --surface: #ffffff;
+            --border: rgba(184,146,60,0.28);
+            --text: #1c1810;
+            --muted: rgba(28,24,16,0.56);
+            --accent: #b8923c;
+            --bubble-own: linear-gradient(135deg,#b8923c,#a8832a);
+            --font-head: 'Playfair Display', serif;
+            --font-body: 'DM Sans', sans-serif;
+        }
+        body.tema-cliente {
+            --bg: #F7F5F2;
+            --surface: #FFFFFF;
+            --border: #E8E4DF;
+            --text: #1A1612;
+            --muted: #7A736C;
+            --accent: #C85A2A;
+            --bubble-own: #C85A2A;
+            --font-head: 'Fraunces', Georgia, serif;
+            --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
+        }
+        *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+        body{font-family:var(--font-body);background:var(--bg);color:var(--text);height:100vh;overflow:hidden;}
+
+        .topbar{
+            height:60px;background:var(--surface);border-bottom:1px solid var(--border);
+            display:flex;align-items:center;gap:14px;padding:0 20px;
+        }
+        .topbar a{color:var(--muted);text-decoration:none;font-size:14px;display:flex;align-items:center;gap:6px;}
+        .topbar a:hover{color:var(--accent);}
+        .topbar h1{font-family:var(--font-head);font-size:18px;font-weight:700;margin-left:6px;}
+
+        .chat-layout{display:flex;height:calc(100vh - 60px);}
+
+        .conv-list{
+            width:300px;flex-shrink:0;background:var(--surface);
+            border-right:1px solid var(--border);overflow-y:auto;
+        }
+        .conv-item{
+            display:flex;gap:12px;align-items:center;padding:14px 16px;
+            border-bottom:1px solid var(--border);cursor:pointer;text-decoration:none;color:inherit;
+            transition:background 0.15s;
+        }
+        .conv-item:hover{background:rgba(0,0,0,0.03);}
+        .conv-item.activa{background:rgba(184,146,60,0.08);}
+        .conv-avatar{
+            width:42px;height:42px;border-radius:50%;
+            background:linear-gradient(135deg,var(--accent),#00000030);
+            color:#fff;display:flex;align-items:center;justify-content:center;
+            font-weight:700;font-size:16px;flex-shrink:0;
+        }
+        .conv-info{flex:1;min-width:0;}
+        .conv-nombre{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        .conv-preview{font-size:12.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+        .conv-badge{
+            background:var(--accent);color:#fff;font-size:11px;font-weight:700;
+            border-radius:20px;min-width:20px;height:20px;
+            display:flex;align-items:center;justify-content:center;padding:0 6px;flex-shrink:0;
+        }
+        .conv-empty{padding:30px 20px;color:var(--muted);font-size:13.5px;text-align:center;line-height:1.5;}
+
+        .thread{flex:1;display:flex;flex-direction:column;min-width:0;}
+        .thread-header{
+            padding:14px 24px;background:var(--surface);border-bottom:1px solid var(--border);
+            font-weight:700;font-family:var(--font-head);font-size:17px;
+            display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+        }
+        .thread-header-actions{display:flex;align-items:center;gap:8px;font-family:var(--font-body);font-weight:600;font-size:12.5px;}
+        .thread-header-btn{
+            padding:6px 12px;border-radius:18px;border:1px solid var(--border);
+            background:var(--bg);color:var(--text);text-decoration:none;cursor:pointer;
+            transition:border-color .15s,color .15s;
+        }
+        .thread-header-btn:hover{border-color:var(--accent);color:var(--accent);}
+        .conv-search-box{padding:12px 14px;border-bottom:1px solid var(--border);background:var(--surface);}
+        .conv-search-box input{
+            width:100%;padding:8px 13px;border-radius:18px;border:1px solid var(--border);
+            background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:13px;outline:none;
+        }
+        .conv-search-box input:focus{border-color:var(--accent);}
+        .quick-replies{
+            display:flex;gap:8px;flex-wrap:wrap;padding:10px 24px 0;background:var(--surface);
+            border-top:1px solid var(--border);
+        }
+        .quick-chip{
+            padding:5px 12px;border-radius:16px;border:1px solid var(--border);
+            background:var(--bg);color:var(--muted);font-size:12px;cursor:pointer;
+            font-family:var(--font-body);transition:all .15s;
+        }
+        .quick-chip:hover{border-color:var(--accent);color:var(--accent);}
+        .thread-body{flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:10px;}
+        .bubble{
+            max-width:60%;padding:10px 14px;border-radius:16px;font-size:14px;line-height:1.4;
+            white-space:pre-line;word-break:break-word;
+        }
+        .bubble-otro{
+            align-self:flex-start;background:var(--surface);
+            border:1px solid var(--border);border-bottom-left-radius:4px;
+        }
+        .bubble-mio{
+            align-self:flex-end;background:var(--bubble-own);
+            color:#fff;border-bottom-right-radius:4px;
+        }
+        .bubble-hora{font-size:10.5px;opacity:0.65;margin-top:4px;display:block;}
+
+        .thread-empty{
+            flex:1;display:flex;align-items:center;justify-content:center;
+            color:var(--muted);font-size:14px;flex-direction:column;gap:10px;
+        }
+        .thread-empty span{font-size:40px;}
+
+        .chat-input-bar{
+            display:flex;gap:10px;padding:16px 24px;
+            background:var(--surface);border-top:1px solid var(--border);
+        }
+        .chat-input-bar input[type=text]{
+            flex:1;padding:12px 16px;border:1.5px solid var(--border);border-radius:24px;
+            font-family:var(--font-body);font-size:14px;outline:none;background:var(--bg);color:var(--text);
+        }
+        .chat-input-bar input[type=text]:focus{border-color:var(--accent);}
+        .chat-input-bar button{
+            padding:0 22px;border:none;border-radius:24px;background:var(--accent);color:#fff;
+            font-weight:700;cursor:pointer;font-family:var(--font-body);font-size:14px;
+        }
+        @media (max-width: 720px) {
+            body{height:auto;min-height:100vh;overflow:auto;}
+            .chat-layout{flex-direction:column;height:auto;}
+            .conv-list{width:100%;max-height:220px;border-right:none;border-bottom:1px solid var(--border);}
+            .thread{min-height:calc(100vh - 280px);}
+            .bubble{max-width:85%;}
+        }
+    </style>
+</head>
+<body th:class="${esEmprendedor ? 'tema-emprendedor' : 'tema-cliente'}">
+
+<div class="topbar">
+    <a th:href="@{${volverA}}">← Volver</a>
+    <h1>💬 Mensajes</h1>
+</div>
+
+<div class="chat-layout">
+
+    <div class="conv-list">
+        <div class="conv-search-box" th:if="${!#lists.isEmpty(conversaciones)}">
+            <input type="text" id="buscarConvInput" placeholder="Buscar conversación…" oninput="filtrarConversaciones()">
+        </div>
+
+        <div class="conv-empty" th:if="${#lists.isEmpty(conversaciones)}"
+             th:text="${esEmprendedor
+                 ? 'Todavía no tienes conversaciones. Aparecerán aquí cuando un cliente te escriba desde tu tienda pública.'
+                 : 'Todavía no has contactado ninguna tienda. Entra a una tienda pública y dale a &quot;Contactar tienda&quot;.'}">
+            Sin conversaciones
+        </div>
+
+        <a th:each="c : ${conversaciones}"
+           th:href="@{/chat(conversacion_id=${c.id()})}"
+           class="conv-item"
+           th:data-nombre="${c.nombreOtro()}"
+           th:classappend="${c.id() == conversacionId} ? 'activa'">
+            <img th:if="${c.logoOtro() != null}" th:src="${c.logoOtro()}" th:alt="${c.nombreOtro()}"
+                 class="conv-avatar" style="object-fit:cover;border:1px solid var(--border)">
+            <div th:unless="${c.logoOtro() != null}" class="conv-avatar" th:text="${c.inicialOtro()}">T</div>
+            <div class="conv-info">
+                <div class="conv-nombre" th:text="${c.nombreOtro()}">Nombre</div>
+                <div class="conv-preview" th:text="${c.ultimoMensaje() != null ? c.ultimoMensaje() : 'Sin mensajes todavía'}">Sin mensajes todavía</div>
+            </div>
+            <div class="conv-badge" th:if="${c.noLeidos() > 0}" th:text="${c.noLeidos()}">1</div>
+        </a>
+    </div>
+
+    <div class="thread">
+        <div class="thread-empty" th:if="${conversacionActiva == null}">
+            <span>💬</span>
+            <p>Selecciona una conversación para empezar a chatear.</p>
+        </div>
+
+        <th:block th:if="${conversacionActiva != null}">
+            <div class="thread-header">
+                <span th:text="${conversacionActiva.nombreOtro()}">Conversación</span>
+                <div class="thread-header-actions">
+                    <a th:if="${!esEmprendedor and conversacionActiva.tiendaIdOtro() != null}"
+                       th:href="@{/tienda/{id}(id=${conversacionActiva.tiendaIdOtro()})}"
+                       class="thread-header-btn">🏪 Ver tienda</a>
+                    <button type="button" class="thread-header-btn" onclick="actualizarMensajesAjax()">🔄 Actualizar</button>
+                </div>
+            </div>
+
+            <div class="thread-body" id="thread-body">
+                <div class="thread-empty" th:if="${#lists.isEmpty(mensajes)}">
+                    <span>👋</span>
+                    <p>Empieza la conversación escribiendo un mensaje.</p>
+                </div>
+
+                <div th:each="m : ${mensajes}"
+                     class="bubble"
+                     th:classappend="${m.emisor != null and m.emisor.id == usuarioId} ? 'bubble-mio' : 'bubble-otro'">
+                    <span th:text="${m.contenido}">Mensaje</span>
+                    <span class="bubble-hora">
+                        <span th:text="${m.creadoEn != null ? #temporals.format(m.creadoEn, 'dd/MM HH:mm') : ''}">00/00 00:00</span>
+                        <span th:if="${m.emisor != null and m.emisor.id == usuarioId}"
+                              th:text="${m.leido ? ' · ✓✓' : ' · ✓'}"> · ✓</span>
+                    </span>
+                </div>
+            </div>
+
+            <!-- Respuestas rápidas contextuales -->
+            <div class="quick-replies" th:if="${!esEmprendedor}">
+                <button type="button" class="quick-chip" onclick="usarRespuestaRapida('¡Hola! ¿Tienen disponibilidad inmediata?')">👋 ¿Tienen disponibilidad?</button>
+                <button type="button" class="quick-chip" onclick="usarRespuestaRapida('¿Cuánto tarda el envío a mi ciudad?')">🚚 Tiempo de envío</button>
+                <button type="button" class="quick-chip" onclick="usarRespuestaRapida('Acabo de realizar un pedido, quedo atento(a).')">📦 Hice un pedido</button>
+            </div>
+            <div class="quick-replies" th:if="${esEmprendedor}">
+                <button type="button" class="quick-chip" onclick="usarRespuestaRapida('¡Hola! Gracias por escribirnos, sí tenemos disponibilidad.')">✅ Sí hay disponibilidad</button>
+                <button type="button" class="quick-chip" onclick="usarRespuestaRapida('¡Confirmamos tu pedido! Lo estamos preparando.')">📦 Pedido confirmado</button>
+                <button type="button" class="quick-chip" onclick="usarRespuestaRapida('Tu pedido ya va en camino 🚚')">🚚 Pedido enviado</button>
+            </div>
+
+            <form method="POST" th:action="@{/chat/enviar}" class="chat-input-bar" style="border-top:none">
+                <input type="hidden" name="conversacion_id" id="convIdActiva" th:value="${conversacionId}">
+                <input type="text" name="contenido" id="inputMensajeChat" placeholder="Escribe un mensaje…" autocomplete="off" required>
+                <button type="submit">Enviar</button>
+            </form>
+        </th:block>
+    </div>
+
+</div>
+
+<script th:inline="javascript">
+const body = document.getElementById('thread-body');
+if (body) body.scrollTop = body.scrollHeight;
+
+const URL_MENSAJES_AJAX = /*[[@{/chat/mensajes/ajax}]]*/ '/chat/mensajes/ajax';
+const CONV_ID_ACTIVA    = /*[[${conversacionId}]]*/ 0;
+
+function filtrarConversaciones() {
+    const q = (document.getElementById('buscarConvInput')?.value || '').trim().toLowerCase();
+    document.querySelectorAll('.conv-item').forEach(el => {
+        const nom = (el.dataset.nombre || '').toLowerCase();
+        el.style.display = (!q || nom.includes(q)) ? '' : 'none';
+    });
+}
+
+function usarRespuestaRapida(texto) {
+    const input = document.getElementById('inputMensajeChat');
+    if (input) {
+        input.value = texto;
+        input.focus();
+    }
+}
+
+function escapeHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str || '';
+    return d.innerHTML;
+}
+
+function actualizarMensajesAjax() {
+    if (!CONV_ID_ACTIVA || CONV_ID_ACTIVA <= 0 || !body) return;
+    fetch(URL_MENSAJES_AJAX + '?conversacion_id=' + encodeURIComponent(CONV_ID_ACTIVA))
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+            if (!data || !data.ok || !Array.isArray(data.mensajes)) return;
+            if (data.mensajes.length === 0) return;
+            const prevCount = body.querySelectorAll('.bubble').length;
+            if (data.mensajes.length !== prevCount) {
+                body.innerHTML = data.mensajes.map(m => `
+                    <div class="bubble ${m.mio ? 'bubble-mio' : 'bubble-otro'}">
+                        <span>${escapeHtml(m.contenido)}</span>
+                        <span class="bubble-hora">${escapeHtml(m.hora)}${m.mio ? (m.leido ? ' · ✓✓' : ' · ✓') : ''}</span>
+                    </div>
+                `).join('');
+                body.scrollTop = body.scrollHeight;
+            }
+        })
+        .catch(() => {});
+}
+
+if (CONV_ID_ACTIVA > 0) {
+    setInterval(actualizarMensajesAjax, 8000);
+}
+</script>
+</body>
+</html>

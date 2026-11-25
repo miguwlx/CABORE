@@ -2,141 +2,1313 @@
 <html lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Mi tienda - Caboré</title>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Caboré — Panel Emprendedor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" th:href="@{/CSS/emprendedor.css}">
+    <meta name="_csrf" th:content="${_csrf.token}">
+    <meta name="_csrf_header" th:content="${_csrf.headerName}">
     <style>
-        .sb-item { text-decoration: none; }
-        .aviso { padding: 12px 16px; border-radius: 10px; margin-bottom: 20px; font-size: 14px; }
-        .aviso-ok    { background: rgba(34,139,34,0.10); border: 1px solid rgba(34,139,34,0.30); color: #1e6b1e; }
-        .aviso-error { background: rgba(239,68,68,0.10); border: 1px solid rgba(239,68,68,0.30); color: #b42318; }
-        .product-desc { color: var(--muted); font-size: 13px; margin: 4px 0 8px; }
-        .stock-bajo { color: #b42318; font-weight: 600; }
-        .product-actions form { margin: 0; }
-        html { scroll-behavior: smooth; }
+        .badge {
+            display:inline-flex; align-items:center; gap:5px;
+            padding:3px 10px; border-radius:20px; font-size:11px; font-weight:700;
+        }
+        .badge-green  { background:rgba(15,157,99,0.12);  color:#0c7a4d; border:1px solid rgba(15,157,99,0.28); }
+        .badge-gold   { background:rgba(184,146,60,0.14); color:var(--gold); border:1px solid var(--border); }
+        .badge-red    { background:rgba(220,38,38,0.10);  color:#b91c1c; border:1px solid rgba(220,38,38,0.25); }
+        .badge-gray   { background:rgba(28,24,16,0.05);   color:var(--muted); border:1px solid rgba(28,24,16,0.10); }
+
+        .estrella-card {
+            background: linear-gradient(135deg, #fff8e8, #fef0cf);
+            border: 1px solid rgba(184,146,60,0.4);
+            border-radius: 20px;
+            padding: 26px 30px 22px;
+            display: flex;
+            align-items: center;
+            gap: 22px;
+            position: relative;
+            overflow: hidden;
+            margin-bottom: 24px;
+        }
+        .estrella-card::before {
+            content: '';
+            position: absolute; top:-50px; right:-50px;
+            width: 200px; height: 200px;
+            background: radial-gradient(circle, rgba(184,146,60,0.25), transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+        .estrella-crown {
+            position: absolute; top: 14px; left: 18px;
+            font-size: 11px; font-weight: 800; letter-spacing: 1px;
+            text-transform: uppercase; color: #7a5c1c;
+            background: rgba(255,255,255,0.65); border: 1px solid rgba(184,146,60,0.4);
+            padding: 4px 10px; border-radius: 20px;
+        }
+        .estrella-thumb {
+            width: 86px; height: 86px; border-radius: 18px; object-fit: cover;
+            background: #fff; border: 3px solid rgba(255,255,255,0.8);
+            box-shadow: 0 10px 24px rgba(184,146,60,0.3);
+            display: flex; align-items:center; justify-content:center;
+            font-size: 36px; flex-shrink: 0; z-index: 1;
+        }
+        .estrella-info { z-index:1; flex:1; min-width:0; }
+        .estrella-info h3 {
+            font-family:'Playfair Display',serif; font-size: 22px; font-weight:800;
+            margin: 16px 0 8px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+        }
+        .estrella-stats { display:flex; gap:26px; flex-wrap:wrap; }
+        .estrella-stat-num { font-family:'Playfair Display',serif; font-size:19px; font-weight:800; color:#7a5c1c; }
+        .estrella-stat-label { font-size:11px; color:rgba(122,92,28,0.75); text-transform:uppercase; letter-spacing:0.5px; margin-top:2px; }
+
+        .rank-row { display:flex; align-items:center; gap:12px; padding:11px 0; border-bottom:1px solid var(--border); }
+        .rank-row:last-child { border-bottom:none; }
+        .rank-badge {
+            width:24px; height:24px; border-radius:50%;
+            display:flex; align-items:center; justify-content:center;
+            font-size:11px; font-weight:800; flex-shrink:0;
+            background: rgba(28,24,16,0.06); color:var(--muted);
+        }
+        .rank-badge.top1 { background:linear-gradient(135deg,#ffd76a,#c9a227); color:#4a3a05; }
+        .rank-badge.top2 { background:linear-gradient(135deg,#dfe4ea,#b8bfc9); color:#33383f; }
+        .rank-badge.top3 { background:linear-gradient(135deg,#e9b78a,#c17a3e); color:#3f2405; }
+        .rank-bar-track { height:5px; border-radius:3px; background:rgba(28,24,16,0.07); margin-top:6px; overflow:hidden; }
+        .rank-bar-fill { height:100%; border-radius:3px; background:linear-gradient(90deg,var(--gold),#e0bc6b); transition:width 0.5s ease; }
+
+        .estado-select {
+            padding:6px 10px; border-radius:8px; border:1.5px solid var(--border);
+            background:var(--mid); font-family:'DM Sans',sans-serif; font-size:12.5px;
+            font-weight:600; color:var(--light); cursor:pointer;
+        }
+        .estado-select:focus { outline:none; border-color:var(--gold); }
+
+        .store-banner-preview {
+            width:100%; height:140px; border-radius:14px 14px 0 0; object-fit:cover;
+            background: linear-gradient(135deg, #fdf6e8, #fbeed4);
+            display:flex; align-items:center; justify-content:center;
+            font-size:32px; color:var(--muted); border:1px solid var(--border); overflow:hidden;
+        }
+        .store-banner-preview img { width:100%; height:100%; object-fit:cover; }
+        .store-card-preview {
+            background:var(--card); border:1px solid var(--border);
+            border-radius:14px; overflow:hidden; margin-bottom:20px;
+        }
+        .store-card-inner { padding:20px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+        .store-logo-preview {
+            width:64px; height:64px; border-radius:14px; object-fit:cover;
+            background:var(--mid); border:2px solid var(--border);
+            display:flex; align-items:center; justify-content:center;
+            font-size:28px; flex-shrink:0;
+        }
+        .store-info-preview h3 { font-size:17px; font-weight:700; margin-bottom:4px; }
+        .store-info-preview p  { color:var(--muted); font-size:13px; }
+        .color-swatch {
+            display:inline-block; width:14px; height:14px; border-radius:50%;
+            border:2px solid rgba(28,24,16,0.18); vertical-align:middle; margin-right:6px;
+        }
+
+        .tab-bar { display:flex; gap:8px; margin-bottom:24px; border-bottom:1px solid var(--border); padding-bottom:0; }
+        .tab-btn {
+            padding:10px 18px; background:transparent; border:none; border-bottom:2px solid transparent;
+            color:var(--muted); font-family:'DM Sans',sans-serif; font-size:14px; font-weight:600;
+            cursor:pointer; transition:all 0.2s; margin-bottom:-1px;
+        }
+        .tab-btn.active { color:var(--gold); border-bottom-color:var(--gold); }
+        .tab-panel { display:none; }
+        .tab-panel.active { display:block; animation:fadeUp 0.35s ease both; }
+
+        .prod-table { width:100%; border-collapse:collapse; }
+        .prod-table th {
+            text-align:left; font-size:11px; font-weight:700; color:var(--muted);
+            text-transform:uppercase; letter-spacing:0.5px; padding:10px 14px;
+            border-bottom:1px solid var(--border);
+        }
+        .prod-table td {
+            padding:14px; border-bottom:1px solid rgba(28,24,16,0.07);
+            font-size:14px; vertical-align:middle;
+        }
+        .prod-table tr:last-child td { border-bottom:none; }
+        .prod-table tr:hover td { background:rgba(28,24,16,0.025); }
+        .prod-thumb {
+            width:48px; height:48px; border-radius:10px; object-fit:cover;
+            background:var(--mid); display:flex; align-items:center; justify-content:center;
+            font-size:22px; flex-shrink:0; border:1px solid var(--border);
+        }
+
+        .stock-bar { height:4px; background:rgba(28,24,16,0.08); border-radius:2px; margin-top:5px; overflow:hidden; }
+        .stock-fill { height:100%; border-radius:2px; background:linear-gradient(90deg, #0c7a4d, #0f9d63); transition:width 0.5s; }
+
+        .flash {
+            padding:14px 20px; border-radius:12px; font-size:14px; font-weight:500;
+            margin-bottom:20px; display:flex; align-items:center; gap:10px; transition:opacity 0.3s;
+        }
+        .flash-ok  { background:rgba(15,157,99,0.10); border:1px solid rgba(15,157,99,0.28); color:#0c7a4d; }
+        .flash-err { background:rgba(220,38,38,0.10); border:1px solid rgba(220,38,38,0.25); color:#b91c1c; }
+
+        .social-links { display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+        .social-chip {
+            display:inline-flex; align-items:center; gap:6px; padding:5px 12px;
+            background:rgba(28,24,16,0.04); border:1px solid var(--border);
+            border-radius:20px; font-size:12px; color:var(--muted); text-decoration:none;
+        }
+        .social-chip:hover { color:var(--gold); border-color:var(--border); }
+
+        .oferta-tag { font-size:11px; color:#0c7a4d; display:block; margin-top:2px; }
+        .view-toggle { display:flex; gap:6px; }
+        .view-btn {
+            width:32px; height:32px; background:rgba(28,24,16,0.04); border:1px solid var(--border);
+            border-radius:8px; cursor:pointer; font-size:14px;
+            display:flex; align-items:center; justify-content:center; color:var(--muted); transition:all 0.2s;
+        }
+        .view-btn.active { background:rgba(184,146,60,0.14); color:var(--gold); border-color:var(--border); }
+
+        .filter-bar {
+            display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end;
+            background:var(--card); border:1px solid var(--border); border-radius:16px;
+            padding:20px; margin-bottom:20px;
+        }
+        .filter-bar .form-group { min-width:150px; margin-bottom:0; flex:1; }
+        .factura-search { display:flex; gap:10px; margin-bottom:18px; }
+        .factura-search input { flex:1; }
+        .btn-logout { color:#b91c1c; }
+
+        .ventas-grid-2col { display:grid; grid-template-columns:1.4fr 1fr; gap:20px; margin-bottom:24px; }
+        @media (max-width: 900px) {
+            .sidebar { position: static; width: 100%; height: auto; border-right: none; border-bottom: 1px solid var(--border); }
+            body { flex-direction: column; }
+            .main { margin-left: 0; padding: 20px; }
+            .form-grid, .ventas-grid-2col { grid-template-columns: 1fr; }
+            .panel-card { overflow-x: auto; }
+        }
     </style>
 </head>
 <body>
-    <div class="bg-grid"></div>
+<div class="bg-grid"></div>
 
-    <aside class="sidebar">
-        <div class="sb-logo">Cabo<span>ré</span></div>
+<!-- ══════════════════════ SIDEBAR ══════════════════════ -->
+<aside class="sidebar">
+    <div class="sb-logo">Cabo<span>ré</span></div>
 
-        <div class="sb-user">
-            <div class="sb-avatar">🛍️</div>
-            <div class="sb-user-name" th:text="${nombreUsuario}">Nombre</div>
-            <span class="sb-user-role">Emprendedor</span>
+    <div class="sb-user">
+        <div class="sb-avatar">🚀</div>
+        <div class="sb-user-name" th:text="${nombreUsuario}">Nombre</div>
+        <span class="sb-user-role">Emprendedor</span>
+    </div>
+
+    <nav class="sb-nav">
+        <div class="sb-item" th:classappend="${tabActiva == 'inicio'} ? 'active'" data-tab="inicio" onclick="irA('inicio', this)">
+            <span class="sb-icon">🏠</span> Inicio
+        </div>
+        <div class="sb-item" th:classappend="${tabActiva == 'tienda'} ? 'active'" data-tab="tienda" onclick="irA('tienda', this)">
+            <span class="sb-icon">🎨</span> Mi Tienda
+        </div>
+        <a th:href="@{/emprendedor/constructor}" class="sb-item" style="text-decoration:none;color:inherit">
+            <span class="sb-icon">✨</span> Constructor Visual
+            <span class="badge badge-gold" style="margin-left:auto">PRO</span>
+        </a>
+        <div class="sb-item" th:classappend="${tabActiva == 'ventas'} ? 'active'" data-tab="ventas" onclick="irA('ventas', this)">
+            <span class="sb-icon">📊</span> Ventas
+            <span class="badge badge-gold" style="margin-left:auto"
+                  th:if="${ventas.totalPendientes() > 0}"
+                  th:text="${ventas.totalPendientes()}">0</span>
+        </div>
+        <div class="sb-item" th:classappend="${tabActiva == 'reportes'} ? 'active'" data-tab="reportes" onclick="irA('reportes', this)">
+            <span class="sb-icon">📈</span> Reportes
+        </div>
+        <div class="sb-item" th:classappend="${tabActiva == 'facturas'} ? 'active'" data-tab="facturas" onclick="irA('facturas', this)">
+            <span class="sb-icon">🧾</span> Facturas
+        </div>
+        <div class="sb-item" th:classappend="${tabActiva == 'productos'} ? 'active'" data-tab="productos" onclick="irA('productos', this)">
+            <span class="sb-icon">📦</span> Productos
+            <span class="badge badge-gray" style="margin-left:auto" th:text="${totalProductos}">0</span>
+        </div>
+        <div class="sb-item" th:classappend="${tabActiva == 'agregar'} ? 'active'" data-tab="agregar" onclick="irA('agregar', this)">
+            <span class="sb-icon">➕</span> Agregar producto
+        </div>
+        <a th:href="@{/chat}" class="sb-item" style="text-decoration:none;color:inherit">
+            <span class="sb-icon">💬</span> Mensajes
+            <span class="badge badge-gold" style="margin-left:auto"
+                  th:if="${totalMensajesNoLeidos > 0}"
+                  th:text="${totalMensajesNoLeidos}">0</span>
+        </a>
+    </nav>
+
+    <div class="sb-bottom">
+        <form th:action="@{/logout}" method="post" style="margin:0">
+            <button type="submit" class="btn-logout">🚪 Cerrar sesión</button>
+        </form>
+    </div>
+</aside>
+
+<!-- ══════════════════════ MAIN ══════════════════════ -->
+<main class="main">
+
+    <div class="flash flash-ok" th:if="${ok}">
+        <span>✅</span> <span th:text="${ok}"></span>
+    </div>
+    <div class="flash flash-err" th:if="${error}">
+        <span>⚠️</span> <span th:text="${error}"></span>
+    </div>
+
+    <!-- ══════════ INICIO ══════════ -->
+    <div id="inicio" class="seccion" th:classappend="${tabActiva == 'inicio'} ? 'activa'">
+
+        <div class="hero-card">
+            <h1>Hola, <em th:text="${nombreUsuario}">Emprendedor</em> 👋</h1>
+            <p>Aquí tienes el resumen de tu tienda en Caboré. Todo listo para vender.</p>
+            <div class="hero-btns" style="margin-top:20px">
+                <button type="button" class="btn btn-gold"
+                        onclick="irA('ventas', document.querySelector('.sb-item[data-tab=ventas]'))">
+                    📊 Ver ventas
+                </button>
+                <button type="button" class="btn btn-outline"
+                        onclick="irA('tienda', document.querySelector('.sb-item[data-tab=tienda]'))">
+                    🎨 Configurar tienda
+                </button>
+                <a th:href="@{/emprendedor/constructor}" style="text-decoration:none">
+                    <button type="button" class="btn btn-gold">✨ Constructor Visual en Tiempo Real</button>
+                </a>
+                <button type="button" class="btn btn-outline"
+                        onclick="irA('agregar', document.querySelector('.sb-item[data-tab=agregar]'))">
+                    ➕ Nuevo producto
+                </button>
+                <a th:href="@{/tienda/{id}(id=${tienda.id})}" target="_blank" style="text-decoration:none">
+                    <button type="button" class="btn btn-outline">🌐 Ver tienda pública</button>
+                </a>
+            </div>
         </div>
 
-        <nav class="sb-nav">
-            <a class="sb-item active" href="#productos"><span class="sb-icon">📦</span> Mis productos</a>
-            <a class="sb-item" href="#nuevo"><span class="sb-icon">➕</span> Nuevo producto</a>
-        </nav>
-
-        <div class="sb-bottom">
-            <a class="btn-logout" th:href="@{/logout}">🚪 Cerrar sesión</a>
+        <!-- Alerta de stock bajo / agotado o productos pendientes de moderación -->
+        <div class="flash" style="background:rgba(184,146,60,0.12);border:1px solid rgba(184,146,60,0.35);color:#7a5c1c"
+             th:if="${(sinStock != null and sinStock > 0) or (stockBajo != null and stockBajo > 0)}">
+            <span>📦</span>
+            <span>
+                Atención de inventario:
+                <strong th:if="${sinStock > 0}" th:text="${sinStock + (sinStock == 1 ? ' producto agotado' : ' productos agotados')}">0 agotados</strong>
+                <span th:if="${sinStock > 0 and stockBajo > 0}"> y </span>
+                <strong th:if="${stockBajo > 0}" th:text="${stockBajo + (stockBajo == 1 ? ' producto con stock bajo (≤5)' : ' productos con stock bajo (≤5)')}">0 con stock bajo</strong>.
+                <a href="javascript:void(0)" onclick="irA('productos', document.querySelector('.sb-item[data-tab=productos]'))"
+                   style="margin-left:8px;font-weight:700;text-decoration:underline;color:#7a5c1c">Gestionar stock →</a>
+            </span>
         </div>
-    </aside>
 
-    <main class="main">
-        <div class="seccion activa">
+        <!-- Stats de inventario -->
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-label">Total productos</div>
+                <div class="stat-value" th:text="${totalProductos}">0</div>
+                <div class="stat-sub">en tu catálogo</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Productos activos</div>
+                <div class="stat-value" style="color:#0c7a4d" th:text="${totalActivos}">0</div>
+                <div class="stat-sub">visibles al público</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Destacados</div>
+                <div class="stat-value" style="color:var(--gold)" th:text="${totalDestacados}">0</div>
+                <div class="stat-sub">en sugerencias</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Valor inventario</div>
+                <div class="stat-value" style="font-size:20px;margin-top:4px"
+                     th:text="'$' + ${#numbers.formatDecimal(valorInventario, 1, 'POINT', 0, 'COMMA')}">$0</div>
+                <div class="stat-sub" th:text="'precio × stock (' + ${sinStock} + ' sin stock)'">precio × stock</div>
+            </div>
+        </div>
 
-            <div class="tienda-preview">
-                <div class="t-info">
-                    <h3>
-                        <span class="t-dot" th:style="'background:' + ${tienda.color}"></span>
-                        <span th:text="${tienda.nombre}">Mi tienda</span>
-                    </h3>
+        <!-- Vista previa de tienda -->
+        <div class="store-card-preview">
+            <div class="store-banner-preview">
+                <img th:if="${tienda.rutaBanner != null}" th:src="${tienda.rutaBanner}" alt="Banner">
+                <span th:unless="${tienda.rutaBanner != null}">🏪</span>
+            </div>
+            <div class="store-card-inner">
+                <img th:if="${tienda.rutaLogo != null}" th:src="${tienda.rutaLogo}" class="store-logo-preview" alt="Logo">
+                <div th:unless="${tienda.rutaLogo != null}" class="store-logo-preview">🏪</div>
+                <div class="store-info-preview">
+                    <h3 th:text="${tienda.nombre}">Mi tienda</h3>
                     <p th:text="${tienda.descripcion}">Descripción</p>
+                    <div style="margin-top:8px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+                        <span>
+                            <span class="color-swatch" th:style="'background:' + (${tienda.color} ?: '#c9a84c')"></span>
+                            Color activo · Plantilla <strong th:text="${#strings.capitalize(tienda.plantillaSegura)}">Moderna</strong>
+                        </span>
+                        <span th:if="${tienda.ciudad != null and !tienda.ciudad.isBlank()}">
+                            📍 <span th:text="${tienda.ciudad}">Ciudad</span>
+                        </span>
+                        <span class="badge"
+                              th:classappend="${tienda.activo ? 'badge-green' : 'badge-red'}"
+                              th:text="${tienda.activo ? '● Activa' : '● Suspendida'}">● Activa</span>
+                    </div>
+                </div>
+                <a th:href="@{/tienda/{id}(id=${tienda.id})}" target="_blank" style="margin-left:auto;text-decoration:none">
+                    <button type="button" class="btn btn-outline btn-sm">Ver pública 🌐</button>
+                </a>
+            </div>
+        </div>
+
+        <!-- Últimos productos -->
+        <div class="panel-card" th:if="${!#lists.isEmpty(ultimosProductos)}">
+            <div class="sec-header">
+                <h2>Últimos productos</h2>
+                <button type="button" class="btn btn-outline btn-sm"
+                        onclick="irA('productos', document.querySelector('.sb-item[data-tab=productos]'))">
+                    Ver todos →
+                </button>
+            </div>
+            <table class="prod-table">
+                <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th>Precio</th>
+                    <th>Stock</th>
+                    <th>Estado</th>
+                    <th>Verificación</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="p : ${ultimosProductos}">
+                    <td>
+                        <div style="display:flex;align-items:center;gap:12px">
+                            <img th:if="${p.rutaImagen != null}" th:src="${p.rutaImagen}" class="prod-thumb" th:alt="${p.nombre}">
+                            <div th:unless="${p.rutaImagen != null}" class="prod-thumb"
+                                 th:text="${p.categoriaId != null and categoriasMap.containsKey(p.categoriaId) ? categoriasMap.get(p.categoriaId).iconoSeguro : '📦'}">📦</div>
+                            <div>
+                                <div style="font-weight:600" th:text="${p.nombre}">Producto</div>
+                                <div style="font-size:12px;color:var(--muted)"
+                                     th:text="${p.categoriaId != null and categoriasMap.containsKey(p.categoriaId) ? categoriasMap.get(p.categoriaId).nombre : 'Sin categoría'}">Categoría</div>
+                            </div>
+                        </div>
+                    </td>
+                    <td>
+                        <span style="font-family:'Playfair Display',serif;font-weight:700;color:var(--gold)"
+                              th:text="'$' + ${#numbers.formatDecimal(p.precio, 1, 'POINT', 0, 'COMMA')}">$0</span>
+                        <span class="oferta-tag" th:if="${p.tieneOferta}"
+                              th:text="'🏷️ Oferta: $' + ${#numbers.formatDecimal(p.precioOferta, 1, 'POINT', 0, 'COMMA')}">Oferta</span>
+                    </td>
+                    <td>
+                        <span style="font-weight:600" th:text="${p.stock}">0</span>
+                        <div class="stock-bar">
+                            <div class="stock-fill" th:style="'width:' + ${T(java.lang.Math).min(100, (p.stock ?: 0) * 5)} + '%'"></div>
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge" th:classappend="${p.activo ? 'badge-green' : 'badge-red'}"
+                              th:text="${p.activo ? 'Activo' : 'Inactivo'}">Activo</span>
+                        <span class="badge badge-gold" style="margin-left:4px" th:if="${p.destacado}">⭐ Dest.</span>
+                    </td>
+                    <td>
+                        <span class="badge"
+                              th:classappend="${p.estadoVerificacion.name() == 'aprobado' ? 'badge-green' : (p.estadoVerificacion.name() == 'rechazado' ? 'badge-red' : 'badge-gold')}"
+                              th:text="${#strings.capitalize(p.estadoVerificacion.name())}">Pendiente</span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+    </div><!-- /inicio -->
+
+    <!-- ══════════ VENTAS ══════════ -->
+    <div id="ventas" class="seccion" th:classappend="${tabActiva == 'ventas'} ? 'activa'">
+
+        <div class="sec-header">
+            <h2 style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700">Ventas y estadísticas de compras</h2>
+        </div>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-label">Ventas totales</div>
+                <div class="stat-value" style="font-size:20px;margin-top:4px"
+                     th:text="'$' + ${#numbers.formatDecimal(ventas.totalVentas(), 1, 'POINT', 0, 'COMMA')}">$0</div>
+                <div class="stat-sub">histórico de tu tienda</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Pedidos recibidos</div>
+                <div class="stat-value" th:text="${ventas.totalPedidosVenta()}">0</div>
+                <div class="stat-sub">con productos tuyos</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Ticket promedio</div>
+                <div class="stat-value" style="font-size:20px;margin-top:4px"
+                     th:text="'$' + ${#numbers.formatDecimal(ventas.ticketPromedio(), 1, 'POINT', 0, 'COMMA')}">$0</div>
+                <div class="stat-sub">por pedido</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Pendientes</div>
+                <div class="stat-value"
+                     th:style="${ventas.totalPendientes() > 0} ? 'color:#b91c1c' : 'color:inherit'"
+                     th:text="${ventas.totalPendientes()}">0</div>
+                <div class="stat-sub">por confirmar / enviar</div>
+            </div>
+        </div>
+
+        <div class="panel-card" th:if="${#lists.isEmpty(ventas.pedidosAgrupados())}">
+            <div class="empty-state">
+                <span>📊</span>
+                <p>Todavía no tienes ventas registradas. Cuando alguien compre un producto tuyo, aparecerá aquí.</p>
+            </div>
+        </div>
+
+        <th:block th:unless="${#lists.isEmpty(ventas.pedidosAgrupados())}">
+
+            <!-- Producto estrella -->
+            <div class="estrella-card" th:if="${ventas.productoEstrella() != null}"
+                 th:with="est=${ventas.productoEstrella()}">
+                <div class="estrella-crown">👑 Producto estrella</div>
+                <img th:if="${est.rutaImagen() != null}" th:src="${est.rutaImagen()}" class="estrella-thumb" th:alt="${est.nombre()}">
+                <div th:unless="${est.rutaImagen() != null}" class="estrella-thumb">📦</div>
+                <div class="estrella-info">
+                    <h3 th:text="${est.nombre()}">Producto Estrella</h3>
+                    <div class="estrella-stats">
+                        <div>
+                            <div class="estrella-stat-num" th:text="${est.cantidad()}">0</div>
+                            <div class="estrella-stat-label">Unidades vendidas</div>
+                        </div>
+                        <div>
+                            <div class="estrella-stat-num"
+                                 th:text="'$' + ${#numbers.formatDecimal(est.total(), 1, 'POINT', 0, 'COMMA')}">$0</div>
+                            <div class="estrella-stat-label">Generado</div>
+                        </div>
+                        <div>
+                            <div class="estrella-stat-num" th:text="${est.porcentajeVentas() + '%'}">0%</div>
+                            <div class="estrella-stat-label">De tus ventas totales</div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="stats">
-                <div class="stat-card">
-                    <div class="stat-label">Productos</div>
-                    <div class="stat-value" th:text="${totalProductos}">0</div>
-                    <div class="stat-sub">publicados en tu tienda</div>
+            <!-- Mini gráfico últimos 7 días + Top productos -->
+            <div class="ventas-grid-2col">
+                <div class="panel-card">
+                    <h2 style="font-size:16px;margin-bottom:18px">Ventas de los últimos 7 días</h2>
+                    <div style="display:flex;align-items:flex-end;gap:10px;height:140px">
+                        <div th:each="d : ${ventas.ultimos7dias()}"
+                             style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">
+                            <div style="font-size:10px;color:var(--muted);margin-bottom:6px"
+                                 th:text="${d.total().signum() > 0 ? '$' + #numbers.formatDecimal(d.total(), 1, 'POINT', 0, 'COMMA') : ''}"></div>
+                            <div th:style="'width:100%;max-width:34px;border-radius:6px 6px 0 0;background:linear-gradient(180deg,var(--gold),#a8832a);height:' + ${d.alturaPct()} + '%'"></div>
+                            <div style="font-size:11px;color:var(--muted);margin-top:8px" th:text="${d.label()}">01/01</div>
+                        </div>
+                    </div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-label">Sin stock</div>
-                    <div class="stat-value" th:text="${sinStock}">0</div>
-                    <div class="stat-sub">necesitan reposición</div>
+
+                <div class="panel-card">
+                    <h2 style="font-size:16px;margin-bottom:16px">🏆 Más vendidos</h2>
+                    <div class="rank-row" th:each="mv, iter : ${ventas.masVendidos()}">
+                        <div class="rank-badge"
+                             th:classappend="${iter.index == 0 ? 'top1' : (iter.index == 1 ? 'top2' : (iter.index == 2 ? 'top3' : ''))}"
+                             th:text="${iter.count}">1</div>
+                        <img th:if="${mv.rutaImagen() != null}" th:src="${mv.rutaImagen()}" class="prod-thumb" th:alt="${mv.nombre()}">
+                        <div th:unless="${mv.rutaImagen() != null}" class="prod-thumb">📦</div>
+                        <div style="flex:1;min-width:0">
+                            <div style="font-weight:600;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"
+                                 th:text="${mv.nombre()}">Producto</div>
+                            <div style="font-size:12px;color:var(--muted)" th:text="${mv.cantidad() + ' vendidos'}">0 vendidos</div>
+                            <div class="rank-bar-track">
+                                <div class="rank-bar-fill" th:style="'width:' + ${mv.barraPct()} + '%'"></div>
+                            </div>
+                        </div>
+                        <div style="font-weight:700;font-family:'Playfair Display',serif;color:var(--gold);font-size:13px;white-space:nowrap"
+                             th:text="'$' + ${#numbers.formatDecimal(mv.total(), 1, 'POINT', 0, 'COMMA')}">$0</div>
+                    </div>
                 </div>
             </div>
 
-            <div class="aviso aviso-ok"    th:if="${ok}"    th:text="${ok}"></div>
-            <div class="aviso aviso-error" th:if="${error}" th:text="${error}"></div>
-
-            <!-- ── LISTA ── -->
-            <section id="productos" class="panel-card">
-                <div class="sec-header">
-                    <h2>Mis productos</h2>
+            <!-- Tabla de pedidos recibidos con filtro en tiempo real -->
+            <div class="panel-card" style="padding:0;overflow:hidden">
+                <div style="padding:20px 20px 14px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;border-bottom:1px solid var(--border)">
+                    <h2 style="font-size:16px;margin:0">Registro de pedidos</h2>
+                    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                        <input type="text" id="buscarPedidoInput" placeholder="Buscar por # o comprador…"
+                               oninput="filtrarPedidosTienda()"
+                               style="padding:7px 12px;border-radius:8px;border:1px solid var(--border);font-size:13px;background:var(--mid)">
+                        <select id="filtroEstadoPedido" class="estado-select" onchange="filtrarPedidosTienda()">
+                            <option value="">Todos los estados</option>
+                            <option value="pendiente">Pendientes</option>
+                            <option value="confirmado">Confirmados</option>
+                            <option value="enviado">En camino</option>
+                            <option value="entregado">Entregados</option>
+                            <option value="cancelado">Cancelados</option>
+                        </select>
+                    </div>
                 </div>
+                <table class="prod-table" id="tablaPedidosTienda">
+                    <thead>
+                    <tr>
+                        <th>Pedido</th>
+                        <th>Comprador</th>
+                        <th>Productos</th>
+                        <th>Total</th>
+                        <th>Estado / Acciones</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="ped : ${ventas.pedidosAgrupados()}"
+                        class="fila-pedido-tienda"
+                        th:data-estado="${ped.estado().name()}"
+                        th:data-busqueda="${'#' + ped.pedidoId() + ' ' + ped.numeroFactura() + ' ' + ped.compradorNombre()}">
+                        <td>
+                            <div style="font-weight:700" th:text="'#' + ${ped.pedidoId()}">#1</div>
+                            <div style="font-size:11px;color:var(--muted)" th:text="${ped.numeroFactura()}">FAC</div>
+                            <div style="font-size:11px;color:var(--muted)"
+                                 th:text="${ped.creadoEn() != null ? #temporals.format(ped.creadoEn(), 'dd/MM/yyyy HH:mm') : ''}">Fecha</div>
+                        </td>
+                        <td>
+                            <div style="font-weight:600" th:text="${ped.compradorNombre()}">Comprador</div>
+                            <div style="font-size:11px;color:var(--muted)"
+                                 th:if="${ped.compradorTelefono() != null and !ped.compradorTelefono().isBlank()}"
+                                 th:text="'📞 ' + ${ped.compradorTelefono()}">Teléfono</div>
+                            <div style="font-size:11px;color:var(--muted)"
+                                 th:if="${ped.direccion() != null and !ped.direccion().isBlank()}"
+                                 th:text="'📍 ' + ${ped.direccion()}">Dirección</div>
+                            <div style="font-size:11px;color:#7a5c1c;margin-top:3px"
+                                 th:if="${ped.notas() != null and !ped.notas().isBlank()}"
+                                 th:text="'📝 Nota: ' + ${ped.notas()}">Nota</div>
+                        </td>
+                        <td>
+                            <div style="font-size:12.5px;margin-bottom:2px" th:each="it : ${ped.items()}"
+                                 th:text="${it.cantidad() + '× ' + it.productoNombre()}">1× Producto</div>
+                        </td>
+                        <td>
+                            <span style="font-family:'Playfair Display',serif;font-weight:700;color:var(--gold)"
+                                  th:text="'$' + ${#numbers.formatDecimal(ped.totalTienda(), 1, 'POINT', 0, 'COMMA')}">$0</span>
+                        </td>
+                        <td>
+                            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+                                <select class="estado-select"
+                                        th:data-pedido="${ped.pedidoId()}"
+                                        th:data-original="${ped.estado().name()}"
+                                        th:disabled="${ped.estado().name() == 'cancelado'}"
+                                        onchange="cambiarEstadoPedido(this)">
+                                    <option value="pendiente"  th:selected="${ped.estado().name() == 'pendiente'}">Pendiente</option>
+                                    <option value="confirmado" th:selected="${ped.estado().name() == 'confirmado'}">Confirmado</option>
+                                    <option value="enviado"    th:selected="${ped.estado().name() == 'enviado'}">En camino</option>
+                                    <option value="entregado"  th:selected="${ped.estado().name() == 'entregado'}">Entregado</option>
+                                    <option value="cancelado"  th:selected="${ped.estado().name() == 'cancelado'}">Cancelado</option>
+                                </select>
+                                <a th:if="${ped.compradorId() != null}"
+                                   th:href="@{/chat/iniciar-cliente(clienteId=${ped.compradorId()})}"
+                                   class="btn btn-outline btn-sm" style="text-decoration:none;padding:5px 10px;font-size:12px"
+                                   title="Chatear con el comprador">💬 Chat</a>
+                                <a th:href="@{/emprendedor/factura/{id}(id=${ped.pedidoId()})}"
+                                   target="_blank" class="btn btn-outline btn-sm"
+                                   style="text-decoration:none;padding:5px 10px;font-size:12px"
+                                   title="Ver factura">🧾</a>
+                            </div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
 
-                <div class="empty-state" th:if="${#lists.isEmpty(productos)}">
-                    <span>📦</span>
-                    Aún no tienes productos. Publica el primero desde el formulario de abajo.
+        </th:block>
+
+    </div><!-- /ventas -->
+
+    <!-- ══════════ REPORTES ══════════ -->
+    <div id="reportes" class="seccion" th:classappend="${tabActiva == 'reportes'} ? 'activa'">
+        <div class="sec-header">
+            <h2>📈 Reportes de mi tienda</h2>
+        </div>
+
+        <form class="filter-bar" method="GET" th:action="@{/emprendedor}">
+            <input type="hidden" name="tab" value="reportes">
+            <div class="form-group">
+                <label>Desde</label>
+                <input type="date" name="desde" th:value="${reporte.desde()}"
+                       style="width:100%;padding:12px 15px;background:rgba(28,24,16,0.03);border:1px solid rgba(28,24,16,0.10);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px">
+            </div>
+            <div class="form-group">
+                <label>Hasta</label>
+                <input type="date" name="hasta" th:value="${reporte.hasta()}"
+                       style="width:100%;padding:12px 15px;background:rgba(28,24,16,0.03);border:1px solid rgba(28,24,16,0.10);border-radius:10px;font-family:'DM Sans',sans-serif;font-size:14px">
+            </div>
+            <div class="form-group">
+                <label>Estado del pedido</label>
+                <select name="estado">
+                    <option value="">Todos</option>
+                    <option th:each="e : ${estadosPedido}"
+                            th:value="${e.name()}"
+                            th:selected="${reporte.estado() == e.name()}"
+                            th:text="${e.etiqueta()}">Estado</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-gold">Filtrar</button>
+            <a class="btn btn-outline" style="text-decoration:none"
+               th:href="@{/emprendedor/reportes/csv(desde=${reporte.desde()}, hasta=${reporte.hasta()}, estado=${reporte.estado()})}">⬇️ CSV</a>
+        </form>
+
+        <div class="stats">
+            <div class="stat-card">
+                <div class="stat-label">Ventas en el período</div>
+                <div class="stat-value" style="font-size:20px;margin-top:4px"
+                     th:text="'$' + ${#numbers.formatDecimal(reporte.totalVentas(), 1, 'POINT', 0, 'COMMA')}">$0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Pedidos</div>
+                <div class="stat-value" th:text="${reporte.totalPedidos()}">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Ticket promedio</div>
+                <div class="stat-value" style="font-size:20px;margin-top:4px"
+                     th:text="'$' + ${#numbers.formatDecimal(reporte.ticketPromedio(), 1, 'POINT', 0, 'COMMA')}">$0</div>
+            </div>
+        </div>
+
+        <div class="panel-card">
+            <h2 style="font-size:16px;margin-bottom:18px">Ventas de los últimos 14 días</h2>
+            <div style="display:flex;align-items:flex-end;gap:6px;height:140px">
+                <div th:each="d : ${reporte.ultimos14()}"
+                     style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">
+                    <div style="font-size:9px;color:var(--muted);margin-bottom:6px"
+                         th:text="${d.total().signum() > 0 ? '$' + #numbers.formatDecimal(d.total(), 1, 'POINT', 0, 'COMMA') : ''}"></div>
+                    <div th:style="'width:100%;max-width:28px;border-radius:6px 6px 0 0;background:linear-gradient(180deg,var(--gold),#a8832a);height:' + ${d.alturaPct()} + '%'"></div>
+                    <div style="font-size:10px;color:var(--muted);margin-top:8px" th:text="${d.label()}">01/01</div>
                 </div>
+            </div>
+        </div>
 
-                <div class="product-grid" th:unless="${#lists.isEmpty(productos)}">
-                    <div class="product-card" th:each="p : ${productos}">
-                        <div class="product-img-placeholder">📦</div>
+        <div class="panel-card">
+            <h2 style="font-size:16px">🏆 Top productos del período</h2>
+            <div class="empty-state" style="padding:20px" th:if="${#lists.isEmpty(reporte.topProductos())}">
+                <p>Sin ventas en este período.</p>
+            </div>
+            <div th:each="mv : ${reporte.topProductos()}"
+                 style="display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border)">
+                <div>
+                    <div style="font-weight:600;font-size:13px" th:text="${mv.nombre()}">Producto</div>
+                    <div style="font-size:12px;color:var(--muted)" th:text="${mv.cantidad() + ' vendidos'}">0 vendidos</div>
+                </div>
+                <div style="font-weight:700;font-family:'Playfair Display',serif;color:var(--gold);font-size:13px"
+                     th:text="'$' + ${#numbers.formatDecimal(mv.total(), 1, 'POINT', 0, 'COMMA')}">$0</div>
+            </div>
+        </div>
+    </div><!-- /reportes -->
+
+    <!-- ══════════ FACTURAS ══════════ -->
+    <div id="facturas" class="seccion" th:classappend="${tabActiva == 'facturas'} ? 'activa'">
+        <div class="sec-header">
+            <h2>🧾 Facturas</h2>
+        </div>
+
+        <form class="factura-search" method="GET" th:action="@{/emprendedor}">
+            <input type="hidden" name="tab" value="facturas">
+            <input type="text" name="f_id" placeholder="Buscar por # de pedido" th:value="${fId}">
+            <button type="submit" class="btn btn-gold btn-sm">Buscar</button>
+        </form>
+
+        <div class="panel-card" style="padding:0;overflow:hidden">
+            <table class="prod-table">
+                <thead>
+                <tr>
+                    <th>Factura</th>
+                    <th>Cliente</th>
+                    <th>Fecha</th>
+                    <th>Estado</th>
+                    <th>Total mi tienda</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:if="${#lists.isEmpty(facturasTienda)}">
+                    <td colspan="6"><div class="empty-state"><p>Todavía no tienes ventas facturadas.</p></div></td>
+                </tr>
+                <tr th:each="f : ${facturasTienda}">
+                    <td style="font-weight:600" th:text="${f.numeroFactura()}">FAC-000001</td>
+                    <td th:text="${f.compradorNombre()}">Cliente</td>
+                    <td th:text="${f.creadoEn() != null ? #temporals.format(f.creadoEn(), 'dd/MM/yyyy HH:mm') : '—'}">Fecha</td>
+                    <td>
+                        <span class="badge"
+                              th:classappend="${f.estado().name() == 'entregado' ? 'badge-green' : (f.estado().name() == 'cancelado' ? 'badge-red' : 'badge-gold')}"
+                              th:text="${f.estado().etiqueta()}">Pendiente</span>
+                    </td>
+                    <td style="font-weight:700;color:var(--gold)"
+                        th:text="'$' + ${#numbers.formatDecimal(f.totalTienda(), 1, 'POINT', 0, 'COMMA')}">$0</td>
+                    <td>
+                        <a th:href="@{/emprendedor/factura/{id}(id=${f.pedidoId()})}"
+                           target="_blank" class="btn btn-outline btn-sm" style="text-decoration:none">Ver factura</a>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <p style="font-size:12px;color:var(--muted);margin-top:10px">
+            Nota: si un cliente compró productos de varias tiendas en un mismo pedido, la factura solo te muestra los productos que le pertenecen a tu tienda.
+        </p>
+    </div><!-- /facturas -->
+
+    <!-- ══════════ TIENDA ══════════ -->
+    <div id="tienda" class="seccion" th:classappend="${tabActiva == 'tienda'} ? 'activa'">
+
+        <div class="sec-header">
+            <h2 style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700">Configurar mi tienda</h2>
+            <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+                <a th:href="@{/emprendedor/constructor}" style="text-decoration:none">
+                    <button type="button" class="btn btn-gold btn-sm">✨ Abrir Constructor Visual Avanzado</button>
+                </a>
+                <a th:href="@{/tienda/{id}(id=${tienda.id})}" target="_blank" style="text-decoration:none">
+                    <button type="button" class="btn btn-outline btn-sm">🌐 Ver pública</button>
+                </a>
+            </div>
+        </div>
+
+        <div class="tab-bar">
+            <button type="button" class="tab-btn active" onclick="abrirTab('tab-info', this)">📋 Información</button>
+            <button type="button" class="tab-btn" onclick="abrirTab('tab-apariencia', this)">🎨 Apariencia</button>
+            <button type="button" class="tab-btn" onclick="abrirTab('tab-contacto', this)">📞 Contacto &amp; Redes</button>
+        </div>
+
+        <!-- Tab: Información -->
+        <div id="tab-info" class="tab-panel active">
+            <div class="panel-card">
+                <form th:action="@{/emprendedor/tienda}" method="POST">
+                    <input type="hidden" name="seccion" value="info">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>Nombre de la tienda *</label>
+                            <input type="text" name="nombre" th:value="${tienda.nombre}" required placeholder="Ej: Boutique Luna">
+                        </div>
+                        <div class="form-group">
+                            <label>Ciudad</label>
+                            <input type="text" name="ciudad" th:value="${tienda.ciudad}" placeholder="Ej: Bogotá">
+                        </div>
+                        <div class="form-group full">
+                            <label>Descripción de la tienda</label>
+                            <textarea name="descripcion" placeholder="Cuéntale a tus clientes qué vendes y qué te hace especial..."
+                                      th:text="${tienda.descripcion}"></textarea>
+                        </div>
+                    </div>
+                    <div style="margin-top:20px">
+                        <button type="submit" class="btn btn-gold">💾 Guardar información</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Tab: Apariencia -->
+        <div id="tab-apariencia" class="tab-panel">
+            <div class="panel-card">
+                <form th:action="@{/emprendedor/tienda}" method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="seccion" value="apariencia">
+                    <div class="form-grid">
+                        <div class="form-group full">
+                            <label>Plantilla de tu tienda</label>
+                            <select name="plantilla" id="plantilla" required>
+                                <option value="moderna"     th:selected="${tienda.plantillaSegura == 'moderna'}">✨ Moderna</option>
+                                <option value="minimalista" th:selected="${tienda.plantillaSegura == 'minimalista'}">◻️ Minimalista</option>
+                                <option value="elegante"    th:selected="${tienda.plantillaSegura == 'elegante'}">👑 Elegante</option>
+                                <option value="tecnologica" th:selected="${tienda.plantillaSegura == 'tecnologica'}">💻 Tecnológica</option>
+                                <option value="colorida"    th:selected="${tienda.plantillaSegura == 'colorida'}">🌈 Colorida</option>
+                            </select>
+                            <div style="font-size:13px;color:var(--muted);margin-top:6px">
+                                Cambia el estilo visual completo de tu tienda pública (colores, tipografía, formas).
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Color principal de tu tienda</label>
+                            <div style="display:flex;gap:10px;align-items:center">
+                                <input type="color" name="color"
+                                       th:value="${tienda.color != null ? tienda.color : '#c9a84c'}"
+                                       style="width:60px;height:45px;padding:3px;cursor:pointer">
+                                <span style="font-size:13px;color:#777">Selecciona el color principal.</span>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Logo de la tienda</label>
+                            <input type="file" name="logo" accept="image/*">
+                            <small th:if="${tienda.logo != null and !tienda.logo.isBlank()}"
+                                   style="display:block;margin-top:8px;color:#777">
+                                Ya tienes un logo cargado.
+                            </small>
+                        </div>
+
+                        <div class="form-group full">
+                            <label>Banner de la tienda</label>
+                            <input type="file" name="banner" accept="image/*">
+                            <small th:if="${tienda.banner != null and !tienda.banner.isBlank()}"
+                                   style="display:block;margin-top:8px;color:#777">
+                                Ya tienes un banner cargado.
+                            </small>
+                        </div>
+                    </div>
+
+                    <div style="margin-top:20px">
+                        <button type="submit" class="btn btn-gold">🎨 Guardar apariencia</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Tab: Contacto & Redes -->
+        <div id="tab-contacto" class="tab-panel">
+            <div class="panel-card">
+                <form th:action="@{/emprendedor/tienda}" method="POST">
+                    <input type="hidden" name="seccion" value="contacto">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label>WhatsApp</label>
+                            <input type="text" name="whatsapp" th:value="${tienda.whatsapp}" placeholder="Ej: 3001234567">
+                            <div style="font-size:11px;color:var(--muted);margin-top:5px">Solo el número, sin espacios ni +57</div>
+                        </div>
+                        <div class="form-group">
+                            <label>Instagram</label>
+                            <input type="text" name="instagram" th:value="${tienda.instagram}" placeholder="Ej: @mitienda">
+                        </div>
+                    </div>
+
+                    <div class="social-links" style="margin-top:16px;margin-bottom:16px"
+                         th:if="${(tienda.whatsapp != null and !tienda.whatsapp.isBlank()) or (tienda.instagram != null and !tienda.instagram.isBlank())}">
+                        <a th:if="${tienda.whatsapp != null and !tienda.whatsapp.isBlank()}"
+                           th:href="'https://wa.me/57' + ${tienda.whatsappDigitos}"
+                           target="_blank" rel="noopener" class="social-chip">📱 WhatsApp</a>
+                        <a th:if="${tienda.instagramUsuario != null}"
+                           th:href="'https://instagram.com/' + ${tienda.instagramUsuario}"
+                           target="_blank" rel="noopener" class="social-chip">📸 Instagram</a>
+                    </div>
+
+                    <div style="margin-top:16px">
+                        <button type="submit" class="btn btn-gold">📞 Guardar contacto</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </div><!-- /tienda -->
+
+    <!-- ══════════ PRODUCTOS ══════════ -->
+    <div id="productos" class="seccion" th:classappend="${tabActiva == 'productos'} ? 'activa'">
+
+        <div class="sec-header">
+            <h2 style="font-family:'Playfair Display',serif;font-size:22px;font-weight:700">Mis productos</h2>
+            <div style="display:flex;gap:10px;align-items:center">
+                <div class="view-toggle">
+                    <button type="button" class="view-btn active" id="btn-grilla" onclick="toggleVista('grilla')">⊞</button>
+                    <button type="button" class="view-btn" id="btn-tabla" onclick="toggleVista('tabla')">≡</button>
+                </div>
+                <button type="button" class="btn btn-gold btn-sm"
+                        onclick="irA('agregar', document.querySelector('.sb-item[data-tab=agregar]'))">
+                    ➕ Agregar
+                </button>
+            </div>
+        </div>
+
+        <div class="panel-card" th:if="${#lists.isEmpty(productos)}">
+            <div class="empty-state">
+                <span>📦</span>
+                <p>Aún no tienes productos. ¡Agrega el primero!</p>
+                <button type="button" class="btn btn-gold" style="margin-top:16px"
+                        onclick="irA('agregar', document.querySelector('.sb-item[data-tab=agregar]'))">
+                    ➕ Agregar producto
+                </button>
+            </div>
+        </div>
+
+        <th:block th:unless="${#lists.isEmpty(productos)}">
+
+            <!-- Barra de búsqueda y filtro rápido de inventario -->
+            <div class="filter-bar" style="padding:14px 18px;margin-bottom:18px;align-items:center">
+                <div class="form-group" style="flex:2;min-width:200px">
+                    <input type="text" id="invBuscarInput" placeholder="Buscar producto por nombre…"
+                           oninput="filtrarInventario()"
+                           style="width:100%;padding:9px 14px;border-radius:10px;border:1px solid var(--border);font-size:13.5px;background:var(--mid)">
+                </div>
+                <div class="form-group" style="min-width:155px">
+                    <select id="invFiltroVerif" class="estado-select" style="width:100%;padding:9px 12px" onchange="filtrarInventario()">
+                        <option value="">Verificación: Todos</option>
+                        <option value="aprobado">✅ Aprobados</option>
+                        <option value="pendiente">⏳ Pendientes</option>
+                        <option value="rechazado">⛔ Rechazados</option>
+                    </select>
+                </div>
+                <div class="form-group" style="min-width:155px">
+                    <select id="invFiltroStock" class="estado-select" style="width:100%;padding:9px 12px" onchange="filtrarInventario()">
+                        <option value="">Stock: Todos</option>
+                        <option value="bajo">⚠️ Stock bajo (1–5)</option>
+                        <option value="agotado">🚨 Sin stock (0)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- VISTA GRILLA -->
+            <div id="vista-grilla">
+                <div class="product-grid">
+                    <div class="product-card item-inventario" th:each="p : ${productos}"
+                         th:data-nombre="${p.nombre}"
+                         th:data-verif="${p.estadoVerificacion.name()}"
+                         th:data-stock="${p.stock}">
+                        <img class="product-img" th:if="${p.rutaImagen != null}" th:src="${p.rutaImagen}" th:alt="${p.nombre}">
+                        <div class="product-img-placeholder" th:unless="${p.rutaImagen != null}"
+                             th:text="${p.categoriaId != null and categoriasMap.containsKey(p.categoriaId) ? categoriasMap.get(p.categoriaId).iconoSeguro : '📷'}">📷</div>
                         <div class="product-body">
+                            <div style="font-size:11px;color:var(--muted);margin-bottom:4px"
+                                 th:text="${p.categoriaId != null and categoriasMap.containsKey(p.categoriaId) ? categoriasMap.get(p.categoriaId).nombre : ''}">Categoría</div>
                             <div class="product-name" th:text="${p.nombre}">Producto</div>
-                            <div class="product-desc" th:if="${p.descripcion != null}" th:text="${p.descripcion}">Descripción</div>
                             <div class="product-price"
                                  th:text="'$' + ${#numbers.formatDecimal(p.precio, 1, 'POINT', 0, 'COMMA')}">$0</div>
-                            <div class="product-desc"
-                                 th:classappend="${p.stock == null or p.stock <= 0} ? 'stock-bajo'"
-                                 th:text="${p.stock == null or p.stock <= 0} ? 'Sin stock' : 'Stock: ' + ${p.stock}">Stock</div>
-
-                            <div class="product-actions">
-                                <a class="btn btn-outline btn-sm"
-                                   th:href="@{/emprendedor/productos/{id}/editar(id=${p.id})}">Editar</a>
-
+                            <div class="oferta-tag" th:if="${p.tieneOferta}"
+                                 th:text="'🏷️ $' + ${#numbers.formatDecimal(p.precioOferta, 1, 'POINT', 0, 'COMMA')}">Oferta</div>
+                            <div style="margin-top:6px;display:flex;gap:6px;flex-wrap:wrap">
+                                <span class="badge" th:classappend="${p.activo ? 'badge-green' : 'badge-red'}"
+                                      th:text="${p.activo ? 'Activo' : 'Inactivo'}">Activo</span>
+                                <span class="badge badge-gold" th:if="${p.destacado}">⭐</span>
+                                <span class="badge badge-gray" th:text="'Stock: ' + ${p.stock}">Stock: 0</span>
+                                <span class="badge"
+                                      th:classappend="${p.estadoVerificacion.name() == 'aprobado' ? 'badge-green' : (p.estadoVerificacion.name() == 'rechazado' ? 'badge-red' : 'badge-gold')}"
+                                      th:text="${#strings.capitalize(p.estadoVerificacion.name())}">Pendiente</span>
+                            </div>
+                            <div th:if="${p.estadoVerificacion.name() == 'rechazado' and p.motivoRechazo != null and !p.motivoRechazo.isBlank()}"
+                                 style="font-size:11.5px;color:#b91c1c;margin-top:6px"
+                                 th:text="'⛔ Motivo: ' + ${p.motivoRechazo}">Motivo de rechazo</div>
+                            <div class="product-actions" style="margin-top:12px">
+                                <a class="btn btn-outline btn-sm" style="text-decoration:none"
+                                   th:href="@{/emprendedor/productos/{id}/editar(id=${p.id})}">✏️ Editar</a>
                                 <form th:action="@{/emprendedor/productos/{id}/eliminar(id=${p.id})}" method="post"
                                       onsubmit="return confirm('¿Eliminar este producto?');">
-                                    <button type="submit" class="btn btn-red btn-sm">Eliminar</button>
+                                    <button type="submit" class="btn btn-red btn-sm">🗑️</button>
                                 </form>
                             </div>
                         </div>
                     </div>
                 </div>
-            </section>
+            </div>
 
-            <!-- ── NUEVO ── -->
-            <section id="nuevo" class="panel-card">
-                <h2>Nuevo producto</h2>
-                <form th:action="@{/emprendedor/productos}" method="post">
-                    <div class="form-grid">
-                        <div class="form-group full">
-                            <label for="nombre">Nombre</label>
-                            <input type="text" id="nombre" name="nombre" required minlength="2" maxlength="150"
-                                   placeholder="Ej: Mochila wayuu mediana">
+            <!-- VISTA TABLA -->
+            <div id="vista-tabla" style="display:none">
+                <div class="panel-card" style="padding:0;overflow:hidden">
+                    <table class="prod-table">
+                        <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th>Precio</th>
+                            <th>Stock</th>
+                            <th>Estado</th>
+                            <th>Verificación</th>
+                            <th>Acciones</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="p : ${productos}" class="item-inventario"
+                            th:data-nombre="${p.nombre}"
+                            th:data-verif="${p.estadoVerificacion.name()}"
+                            th:data-stock="${p.stock}">
+                            <td>
+                                <div style="display:flex;align-items:center;gap:12px">
+                                    <img th:if="${p.rutaImagen != null}" th:src="${p.rutaImagen}" class="prod-thumb" th:alt="${p.nombre}">
+                                    <div th:unless="${p.rutaImagen != null}" class="prod-thumb"
+                                         th:text="${p.categoriaId != null and categoriasMap.containsKey(p.categoriaId) ? categoriasMap.get(p.categoriaId).iconoSeguro : '📦'}">📦</div>
+                                    <div>
+                                        <div style="font-weight:600" th:text="${p.nombre}">Producto</div>
+                                        <div style="font-size:12px;color:var(--muted)"
+                                             th:text="${p.categoriaId != null and categoriasMap.containsKey(p.categoriaId) ? categoriasMap.get(p.categoriaId).nombre : 'Sin categoría'}">Categoría</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <span style="font-family:'Playfair Display',serif;font-weight:700;color:var(--gold)"
+                                      th:text="'$' + ${#numbers.formatDecimal(p.precio, 1, 'POINT', 0, 'COMMA')}">$0</span>
+                                <span class="oferta-tag" th:if="${p.tieneOferta}"
+                                      th:text="'🏷️ $' + ${#numbers.formatDecimal(p.precioOferta, 1, 'POINT', 0, 'COMMA')}">Oferta</span>
+                            </td>
+                            <td>
+                                <div style="display:flex;align-items:center;gap:6px">
+                                    <input type="number" min="0" step="1" th:value="${p.stock}"
+                                           th:id="'stock-in-' + ${p.id}"
+                                           style="width:64px;padding:5px 8px;border-radius:8px;border:1px solid var(--border);font-size:13px;font-weight:600;background:var(--mid)">
+                                    <button type="button" class="btn btn-outline btn-sm"
+                                            style="padding:5px 8px;font-size:11.5px"
+                                            th:onclick="'guardarStockRapido(' + ${p.id} + ')'"
+                                            title="Guardar stock">💾</button>
+                                </div>
+                                <div class="stock-bar">
+                                    <div class="stock-fill" th:id="'stock-bar-' + ${p.id}"
+                                         th:style="'width:' + ${T(java.lang.Math).min(100, (p.stock ?: 0) * 5)} + '%'"></div>
+                                </div>
+                            </td>
+                            <td>
+                                <button type="button" class="badge" style="cursor:pointer"
+                                        th:classappend="${p.activo ? 'badge-green' : 'badge-red'}"
+                                        th:onclick="'alternarCampoRapido(' + ${p.id} + ', \'activo\')'"
+                                        title="Clic para activar / desactivar"
+                                        th:text="${p.activo ? 'Activo' : 'Inactivo'}">Activo</button>
+                                <button type="button" class="badge" style="margin-left:4px;cursor:pointer"
+                                        th:classappend="${p.destacado ? 'badge-gold' : 'badge-gray'}"
+                                        th:onclick="'alternarCampoRapido(' + ${p.id} + ', \'destacado\')'"
+                                        title="Clic para destacar / quitar destacado"
+                                        th:text="${p.destacado ? '⭐ Dest.' : '☆ Normal'}">⭐</button>
+                            </td>
+                            <td>
+                                <span class="badge"
+                                      th:classappend="${p.estadoVerificacion.name() == 'aprobado' ? 'badge-green' : (p.estadoVerificacion.name() == 'rechazado' ? 'badge-red' : 'badge-gold')}"
+                                      th:text="${#strings.capitalize(p.estadoVerificacion.name())}">Pendiente</span>
+                                <div th:if="${p.estadoVerificacion.name() == 'rechazado' and p.motivoRechazo != null and !p.motivoRechazo.isBlank()}"
+                                     style="font-size:11px;color:#b91c1c;margin-top:4px"
+                                     th:text="'Motivo: ' + ${p.motivoRechazo}">Motivo</div>
+                            </td>
+                            <td>
+                                <div style="display:flex;gap:6px">
+                                    <a class="btn btn-outline btn-sm" style="text-decoration:none"
+                                       th:href="@{/emprendedor/productos/{id}/editar(id=${p.id})}">✏️</a>
+                                    <form th:action="@{/emprendedor/productos/{id}/eliminar(id=${p.id})}" method="post"
+                                          onsubmit="return confirm('¿Eliminar este producto?');">
+                                        <button type="submit" class="btn btn-red btn-sm">🗑️</button>
+                                    </form>
+                                </div>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </th:block>
+
+    </div><!-- /productos -->
+
+    <!-- ══════════ AGREGAR PRODUCTO ══════════ -->
+    <div id="agregar" class="seccion" th:classappend="${tabActiva == 'agregar'} ? 'activa'">
+        <div class="panel-card">
+            <h2>➕ Agregar producto</h2>
+
+            <form th:action="@{/emprendedor/productos}" method="POST" enctype="multipart/form-data">
+                <input type="hidden" name="formCompleto" value="1">
+                <div class="form-grid">
+
+                    <div class="form-group">
+                        <label>Nombre del producto *</label>
+                        <input type="text" name="nombre" placeholder="Ej: Camiseta deportiva azul" required minlength="2" maxlength="200">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Categoría</label>
+                        <select name="categoria_id">
+                            <option th:each="c : ${categorias}"
+                                    th:value="${c.id}"
+                                    th:selected="${c.id == 12}"
+                                    th:text="${c.iconoSeguro + ' ' + c.nombre}">Categoría</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Precio (COP) *</label>
+                        <input type="number" name="precio" placeholder="Ej: 50000" min="1" step="any" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Precio en oferta (COP) <span style="color:var(--muted);font-weight:400">(opcional)</span></label>
+                        <input type="number" name="precio_oferta" placeholder="Ej: 39900" min="0" step="any">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Stock disponible</label>
+                        <input type="number" name="stock" placeholder="Ej: 20" min="0" step="1" value="1" required>
+                    </div>
+
+                    <div class="form-group" style="display:flex;flex-direction:column;justify-content:flex-end;gap:12px">
+                        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;text-transform:none;font-size:14px;font-weight:500">
+                            <input type="checkbox" name="destacado" value="true" style="width:16px;height:16px">
+                            ⭐ Marcar como producto destacado
+                        </label>
+                        <label style="display:flex;align-items:center;gap:10px;cursor:pointer;text-transform:none;font-size:14px;font-weight:500">
+                            <input type="checkbox" name="activo" value="true" checked style="width:16px;height:16px">
+                            ✅ Producto activo (visible al público)
+                        </label>
+                    </div>
+
+                    <div class="form-group full">
+                        <label>Descripción del producto</label>
+                        <textarea name="descripcion" placeholder="Describe materiales, tallas, colores disponibles, características especiales..."></textarea>
+                    </div>
+
+                    <div class="form-group full">
+                        <label>Imagen del producto</label>
+                        <input type="file" name="imagen" accept="image/*" id="imgInput" onchange="previewImg(this)">
+                        <div id="imgPreview" style="margin-top:12px;display:none">
+                            <img id="imgPreviewSrc" style="max-height:180px;border-radius:10px;border:1px solid var(--border)" alt="Vista previa">
                         </div>
-                        <div class="form-group full">
-                            <label for="descripcion">Descripción</label>
-                            <textarea id="descripcion" name="descripcion"
-                                      placeholder="Materiales, tamaño, detalles que el cliente debe saber"></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label for="precio">Precio (COP)</label>
-                            <input type="number" id="precio" name="precio" required min="1" step="any"
-                                   placeholder="25000">
-                        </div>
-                        <div class="form-group">
-                            <label for="stock">Unidades disponibles</label>
-                            <input type="number" id="stock" name="stock" required min="0" step="1" value="1">
+                        <div style="font-size:11px;color:var(--muted);margin-top:6px">
+                            JPG, PNG, WEBP, GIF — máx 5MB. Recomendado: imagen cuadrada 600×600px
                         </div>
                     </div>
-                    <div style="margin-top:20px;">
-                        <button type="submit" class="btn btn-gold">Publicar producto</button>
-                    </div>
-                </form>
-            </section>
 
+                </div>
+
+                <div style="margin-top:24px;display:flex;gap:12px">
+                    <button type="submit" class="btn btn-gold">💾 Guardar producto</button>
+                    <button type="reset" class="btn btn-outline">🔄 Limpiar</button>
+                </div>
+            </form>
         </div>
-    </main>
+    </div><!-- /agregar -->
+
+</main>
+
+<script th:inline="javascript">
+const CSRF_TOKEN  = document.querySelector('meta[name="_csrf"]')?.content;
+const CSRF_HEADER = document.querySelector('meta[name="_csrf_header"]')?.content || 'X-CSRF-TOKEN';
+const URL_CAMBIAR_ESTADO_PEDIDO = /*[[@{/emprendedor/pedidos/estado/ajax}]]*/ '/emprendedor/pedidos/estado/ajax';
+const URL_STOCK_RAPIDO          = /*[[@{/emprendedor/productos/stock/ajax}]]*/ '/emprendedor/productos/stock/ajax';
+const URL_TOGGLE_RAPIDO         = /*[[@{/emprendedor/productos/toggle/ajax}]]*/ '/emprendedor/productos/toggle/ajax';
+
+function filtrarInventario() {
+    const q     = (document.getElementById('invBuscarInput')?.value || '').trim().toLowerCase();
+    const verif = document.getElementById('invFiltroVerif')?.value || '';
+    const stock = document.getElementById('invFiltroStock')?.value || '';
+
+    document.querySelectorAll('.item-inventario').forEach(el => {
+        const nom = (el.dataset.nombre || '').toLowerCase();
+        const v   = el.dataset.verif || '';
+        const st  = parseInt(el.dataset.stock || '0', 10);
+        let ok = true;
+        if (q && !nom.includes(q)) ok = false;
+        if (verif && v !== verif) ok = false;
+        if (stock === 'bajo' && !(st > 0 && st <= 5)) ok = false;
+        if (stock === 'agotado' && st > 0) ok = false;
+        el.style.display = ok ? '' : 'none';
+    });
+}
+
+function filtrarPedidosTienda() {
+    const q      = (document.getElementById('buscarPedidoInput')?.value || '').trim().toLowerCase();
+    const estado = document.getElementById('filtroEstadoPedido')?.value || '';
+
+    document.querySelectorAll('.fila-pedido-tienda').forEach(tr => {
+        const busq = (tr.dataset.busqueda || '').toLowerCase();
+        const est  = tr.dataset.estado || '';
+        const ok   = (!q || busq.includes(q)) && (!estado || est === estado);
+        tr.style.display = ok ? '' : 'none';
+    });
+}
+
+function guardarStockRapido(productoId) {
+    const input = document.getElementById('stock-in-' + productoId);
+    if (!input) return;
+    const stock = parseInt(input.value, 10);
+    if (isNaN(stock) || stock < 0) {
+        alert('El stock debe ser un número mayor o igual a 0.');
+        return;
+    }
+    fetch(URL_STOCK_RAPIDO, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            [CSRF_HEADER]: CSRF_TOKEN
+        },
+        body: new URLSearchParams({ producto_id: productoId, stock: stock })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.ok) {
+            const bar = document.getElementById('stock-bar-' + productoId);
+            if (bar) bar.style.width = Math.min(100, data.stock * 5) + '%';
+            input.style.borderColor = '#0c7a4d';
+            setTimeout(() => input.style.borderColor = '', 1500);
+        } else {
+            alert(data.error || 'No se pudo actualizar el stock.');
+        }
+    })
+    .catch(() => alert('Error de conexión al actualizar el stock.'));
+}
+
+function alternarCampoRapido(productoId, campo) {
+    fetch(URL_TOGGLE_RAPIDO, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            [CSRF_HEADER]: CSRF_TOKEN
+        },
+        body: new URLSearchParams({ producto_id: productoId, campo: campo })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.ok) location.reload();
+        else alert(data.error || 'No se pudo actualizar el producto.');
+    })
+    .catch(() => alert('Error de conexión.'));
+}
+
+function irA(id, elNav) {
+    document.querySelectorAll('.seccion').forEach(s => s.classList.remove('activa'));
+    const target = document.getElementById(id);
+    if (target) target.classList.add('activa');
+    document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
+    if (elNav && elNav.classList) elNav.classList.add('active');
+}
+
+function abrirTab(id, btn) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    btn.classList.add('active');
+}
+
+function toggleVista(modo) {
+    const grilla = document.getElementById('vista-grilla');
+    const tabla  = document.getElementById('vista-tabla');
+    const btnG   = document.getElementById('btn-grilla');
+    const btnT   = document.getElementById('btn-tabla');
+    if (!grilla || !tabla) return;
+    if (modo === 'grilla') {
+        grilla.style.display = 'block';
+        tabla.style.display  = 'none';
+        btnG.classList.add('active');
+        btnT.classList.remove('active');
+    } else {
+        grilla.style.display = 'none';
+        tabla.style.display  = 'block';
+        btnT.classList.add('active');
+        btnG.classList.remove('active');
+    }
+}
+
+function cambiarEstadoPedido(select) {
+    const pedidoId = select.dataset.pedido;
+    const estado   = select.value;
+    const original = select.dataset.original || estado;
+    select.disabled = true;
+
+    fetch(URL_CAMBIAR_ESTADO_PEDIDO, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            [CSRF_HEADER]: CSRF_TOKEN
+        },
+        body: new URLSearchParams({ pedido_id: pedidoId, estado: estado })
+    })
+    .then(r => r.json())
+    .then(data => {
+        select.disabled = false;
+        if (data.ok) {
+            select.dataset.original = estado;
+        } else {
+            select.value = original;
+            alert(data.error || 'No se pudo actualizar el estado del pedido.');
+        }
+    })
+    .catch(() => {
+        select.disabled = false;
+        select.value = original;
+        alert('Error de conexión al actualizar el pedido.');
+    });
+}
+
+function previewImg(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = e => {
+            document.getElementById('imgPreviewSrc').src = e.target.result;
+            document.getElementById('imgPreview').style.display = 'block';
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+const flash = document.querySelector('.flash');
+if (flash) setTimeout(() => flash.style.opacity = '0', 4000);
+</script>
 </body>
 </html>

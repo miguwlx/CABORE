@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Caboré — Recuperación enviada</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" th:href="@{/CSS/recuperacion.css}">
+</head>
+<body>
+
+<div class="noise"></div>
+<div class="bg-glow a"></div>
+<div class="bg-glow b"></div>
+
+<div class="recover-card" style="text-align:center">
+  <th:block th:if="${esError}">
+    <div class="recover-icon" style="margin:0 auto 20px;background:linear-gradient(135deg,#f87171,#dc2626)">⚠️</div>
+    <div class="recover-title">Algo salió mal</div>
+    <p class="recover-sub" th:text="${mensaje}"></p>
+    <a th:href="@{/olvide-password}" class="btn-gold" style="text-decoration:none">Intentar de nuevo</a>
+  </th:block>
+  <th:block th:unless="${esError}">
+    <div class="recover-icon" style="margin:0 auto 20px;background:linear-gradient(135deg,#34d399,#0f9d63)">📩</div>
+    <div class="recover-title">Revisa tu correo</div>
+    <p class="recover-sub" th:text="${mensaje}"></p>
+    <a th:href="@{/login}" class="btn-gold" style="text-decoration:none">← Volver a iniciar sesión</a>
+  </th:block>
+</div>
+
+</body>
+</html>

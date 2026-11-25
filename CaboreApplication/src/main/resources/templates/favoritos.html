@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis favoritos — Caboré</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" th:href="@{/CSS/cliente.css}">
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-glow a"></div>
+<div class="bg-glow b"></div>
+
+<nav th:replace="~{fragments/cliente-nav :: navbar}"></nav>
+
+<main class="page">
+    <div class="flash ok" th:if="${flashOk}"><i class="fas fa-check-circle"></i> <span th:text="${flashOk}"></span></div>
+    <div class="flash err" th:if="${flashErr}"><i class="fas fa-exclamation-circle"></i> <span th:text="${flashErr}"></span></div>
+
+    <div class="section-header">
+        <h2><i class="fas fa-heart"></i> Mis favoritos</h2>
+        <span th:text="${#lists.size(productos)} + (${#lists.size(productos) == 1 ? ' producto guardado' : ' productos guardados'})">0</span>
+    </div>
+
+    <div class="empty" th:if="${#lists.isEmpty(productos)}">
+        <i class="far fa-heart"></i>
+        <h3>Toda la vida en blanco y negro</h3>
+        <p>Toca el corazón en el catálogo para guardar tus productos favoritos aquí.</p>
+        <a class="price-apply browse-btn" th:href="@{/cliente}">Explorar productos</a>
+    </div>
+
+    <div class="product-grid" th:unless="${#lists.isEmpty(productos)}">
+        <div class="prod-card" th:each="p : ${productos}">
+            <div class="prod-img-wrap">
+                <a th:href="@{/cliente/producto/{id}(id=${p.id})}">
+                    <img th:if="${p.rutaImagen != null}" th:src="${p.rutaImagen}" th:alt="${p.nombre}" loading="lazy">
+                    <div class="no-img" th:unless="${p.rutaImagen != null}"><i class="fas fa-box-open"></i></div>
+                </a>
+                <span class="badge-oferta" th:if="${p.tieneOferta}" th:text="'-' + ${p.descuento} + '%'">-0%</span>
+                <!-- Quitar de favoritos -->
+                <form th:action="@{/cliente/favoritos/toggle}" method="post" class="fav-form">
+                    <input type="hidden" name="productoId" th:value="${p.id}">
+                    <input type="hidden" name="volver" value="/cliente/favoritos">
+                    <button type="submit" class="fav-btn active" title="Quitar de favoritos">
+                        <i class="fas fa-heart"></i>
+                    </button>
+                </form>
+            </div>
+            <div class="prod-body">
+                <div class="prod-store">
+                    <span class="prod-store-dot" th:style="'background:' + (${p.tienda.color} ?: '#888')"></span>
+                    <a th:href="@{/tienda/{id}(id=${p.tienda.id})}" th:text="${p.tienda.nombre}">Tienda</a>
+                </div>
+                <div class="prod-name"><a th:href="@{/cliente/producto/{id}(id=${p.id})}" th:text="${p.nombre}">Producto</a></div>
+                <div class="prod-rating" th:if="${p.ratingPromedio != null and p.ratingPromedio > 0}">
+                    <th:block th:each="i : ${#numbers.sequence(1, 5)}">
+                        <i th:class="${i <= p.ratingPromedio + 0.49} ? 'fas fa-star' : 'far fa-star'"></i>
+                    </th:block>
+                    <span th:text="'(' + ${p.totalResenas} + ')'">(0)</span>
+                </div>
+                <div class="prod-price-row">
+                    <span class="prod-price" th:classappend="${p.tieneOferta} ? 'oferta'"
+                          th:text="'$' + ${#numbers.formatDecimal(p.precioActual, 1, 'POINT', 0, 'COMMA')}">$0</span>
+                    <span class="prod-price-old" th:if="${p.tieneOferta}"
+                          th:text="'$' + ${#numbers.formatDecimal(p.precio, 1, 'POINT', 0, 'COMMA')}">$0</span>
+                </div>
+                <p class="prod-stock" th:classappend="${p.disponible} ? '' : 'out'"
+                   th:text="${p.disponible} ? ('Stock: ' + ${p.stock}) : 'No disponible por ahora'"></p>
+            </div>
+            <div class="prod-footer">
+                <form th:action="@{/cliente/carrito/agregar}" method="post" class="inline-form">
+                    <input type="hidden" name="productoId" th:value="${p.id}">
+                    <input type="hidden" name="cantidad" value="1">
+                    <input type="hidden" name="volver" value="/cliente/favoritos">
+                    <button type="submit" class="btn-cart" th:disabled="${!p.disponible}">
+                        <i class="fas fa-bag-shopping"></i> Agregar
+                    </button>
+                </form>
+                <a class="btn-ficha" th:href="@{/cliente/producto/{id}(id=${p.id})}" title="Ver ficha y reseñas">Ficha</a>
+            </div>
+        </div>
+    </div>
+</main>
+</body>
+</html>

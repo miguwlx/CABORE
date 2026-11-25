@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="'Pedido #' + ${pedido.id} + ' — Caboré'">Pedido</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" th:href="@{/CSS/cliente.css}">
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-glow a"></div>
+<div class="bg-glow b"></div>
+
+<nav th:replace="~{fragments/cliente-nav :: navbar}"></nav>
+
+<main class="page narrow">
+    <div class="flash ok" th:if="${flashOk}"><i class="fas fa-check-circle"></i> <span th:text="${flashOk}"></span></div>
+    <div class="flash ok" th:if="${param.nuevo != null and flashOk == null}">
+        <i class="fas fa-circle-check"></i> ¡Gracias por tu compra! Tu pedido quedó registrado y las tiendas te contactarán.
+    </div>
+    <div class="flash err" th:if="${flashErr}"><i class="fas fa-exclamation-circle"></i> <span th:text="${flashErr}"></span></div>
+
+    <a class="back-link" th:href="@{/cliente/pedidos}">← Volver a mis pedidos</a>
+
+    <div class="order-detail-head">
+        <div>
+            <h1 th:text="'Pedido #' + ${pedido.id}">Pedido #</h1>
+            <p class="order-date">
+                <i class="far fa-calendar"></i>
+                Creado el <span th:text="${#temporals.format(pedido.creadoEn, 'dd/MM/yyyy') + ' a las ' + #temporals.format(pedido.creadoEn, 'HH:mm')}"></span>
+                · Factura <strong th:text="${pedido.numeroFactura}">FAC-000000</strong>
+            </p>
+        </div>
+        <span class="estado-badge big"
+              th:classappend="'estado-' + ${pedido.estado.name()}"
+              th:text="${pedido.estado.etiqueta()}">estado</span>
+    </div>
+
+    <!-- Línea de tiempo -->
+    <div class="order-steps">
+        <div class="step" th:classappend="${pedido.estado.name() != 'cancelado'} ? 'done'">
+            <i class="fas fa-file-circle-check"></i><span>Pedido registrado</span>
+        </div>
+        <div class="step" th:classappend="${pedido.estado.name() == 'confirmado' or pedido.estado.name() == 'enviado' or pedido.estado.name() == 'entregado'} ? 'done'">
+            <i class="fas fa-handshake"></i><span>Confirmado por la tienda</span>
+        </div>
+        <div class="step" th:classappend="${pedido.estado.name() == 'enviado' or pedido.estado.name() == 'entregado'} ? 'done'">
+            <i class="fas fa-truck"></i><span>En camino</span>
+        </div>
+        <div class="step" th:classappend="${pedido.estado.name() == 'entregado'} ? 'done'">
+            <i class="fas fa-box-open"></i><span>Entregado</span>
+        </div>
+        <div class="step cancelled" th:if="${pedido.estado.name() == 'cancelado'}">
+            <i class="fas fa-ban"></i><span>Pedido cancelado</span>
+        </div>
+    </div>
+
+    <!-- Entrega -->
+    <div class="panel">
+        <h3><i class="fas fa-map-marker-alt"></i> Entrega</h3>
+        <p><strong>Dirección:</strong> <span th:text="${pedido.direccion} ?: '—'"></span></p>
+        <p th:if="${pedido.telefonoContacto != null and !pedido.telefonoContacto.isBlank()}">
+            <strong>Teléfono:</strong> <span th:text="${pedido.telefonoContacto}"></span></p>
+        <p th:if="${pedido.notas != null and !pedido.notas.isBlank()}">
+            <strong>Notas:</strong> <span th:text="${pedido.notas}"></span></p>
+    </div>
+
+    <!-- Ítems -->
+    <div class="panel">
+        <h3><i class="fas fa-receipt"></i> Productos</h3>
+        <table class="tbl">
+            <thead>
+            <tr><th>Producto</th><th>Tienda</th><th class="num">Cant.</th><th class="num">Precio unit.</th><th class="num">Subtotal</th></tr>
+            </thead>
+            <tbody>
+            <tr th:each="i : ${pedido.items}">
+                <td><a th:href="@{/cliente/producto/{id}(id=${i.producto.id})}" th:text="${i.producto.nombre}">Producto</a></td>
+                <td>
+                    <span th:text="${i.producto.tienda != null} ? ${i.producto.tienda.nombre} : '—'">Tienda</span>
+                    <a th:if="${i.producto.tienda != null}"
+                       th:href="@{/chat/iniciar(tiendaId=${i.producto.tienda.id})}"
+                       style="margin-left:8px;font-size:.75rem;color:var(--gold-dk)"
+                       title="Chatear con la tienda"><i class="far fa-comment-dots"></i> Chat</a>
+                </td>
+                <td class="num" th:text="${i.cantidad}">1</td>
+                <td class="num" th:text="'$' + ${#numbers.formatDecimal(i.precioEfectivo, 1, 'POINT', 0, 'COMMA')}">$0</td>
+                <td class="num" th:text="'$' + ${#numbers.formatDecimal(i.subtotalEfectivo, 1, 'POINT', 0, 'COMMA')}">$0</td>
+            </tr>
+            </tbody>
+            <tfoot>
+            <tr>
+                <td colspan="4" class="num"><strong>Total</strong></td>
+                <td class="num total-cell" th:text="'$' + ${#numbers.formatDecimal(pedido.total, 1, 'POINT', 0, 'COMMA')}">$0</td>
+            </tr>
+            </tfoot>
+        </table>
+    </div>
+
+    <div class="order-actions-row">
+        <a class="price-apply" th:href="@{/cliente/factura/{id}(id=${pedido.id})}">
+            <i class="fas fa-file-invoice-dollar"></i> Ver factura
+        </a>
+        <form th:action="@{/cliente/pedido/{id}/reordenar(id=${pedido.id})}" method="post" class="inline-form">
+            <button type="submit" class="price-apply ghost">
+                <i class="fas fa-rotate-right"></i> Volver a comprar
+            </button>
+        </form>
+        <a class="price-apply ghost" th:href="@{/cliente}"><i class="fas fa-bag-shopping"></i> Seguir comprando</a>
+        <form th:if="${pedido.estado.name() == 'pendiente'}"
+              th:action="@{/cliente/pedido/{id}/cancelar(id=${pedido.id})}" method="post" class="inline-form">
+            <button type="submit" class="btn-danger" onclick="return confirm('¿Cancelar este pedido? El stock volverá a estar disponible.')">
+                <i class="fas fa-ban"></i> Cancelar pedido
+            </button>
+        </form>
+    </div>
+</main>
+</body>
+</html>

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi perfil — Caboré</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" th:href="@{/CSS/cliente.css}">
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-glow a"></div>
+<div class="bg-glow b"></div>
+
+<nav th:replace="~{fragments/cliente-nav :: navbar}"></nav>
+
+<main class="page narrow">
+    <div class="flash ok" th:if="${flashOk}"><i class="fas fa-check-circle"></i> <span th:text="${flashOk}"></span></div>
+    <div class="flash err" th:if="${flashErr}"><i class="fas fa-exclamation-circle"></i> <span th:text="${flashErr}"></span></div>
+
+    <div class="profile-head">
+        <div class="nav-avatar big" th:text="${#strings.isEmpty(usuario.nombre) ? 'C' : #strings.toUpperCase(#strings.substring(usuario.nombre, 0, 1))}">C</div>
+        <div style="flex:1">
+            <h1 th:text="${usuario.nombre}">Mi nombre</h1>
+            <p class="muted" th:text="${usuario.correo}">correo@caboré.co</p>
+            <p class="muted" th:if="${usuario.creadoEn != null}">
+                <i class="far fa-calendar"></i> Cliente desde el <span th:text="${#temporals.format(usuario.creadoEn, 'dd/MM/yyyy')}"></span>
+            </p>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <div th:if="${totalPedidos != null}"
+                 style="text-align:center;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px 18px;box-shadow:var(--shadow)">
+                <strong style="display:block;font-size:1.35rem;font-family:var(--font-head);color:var(--gold-dk)" th:text="${totalPedidos}">0</strong>
+                <span style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em"
+                      th:text="${totalPedidos == 1 ? 'Pedido' : 'Pedidos'}">Pedidos</span>
+            </div>
+            <div th:if="${favoritosCount != null}"
+                 style="text-align:center;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px 18px;box-shadow:var(--shadow)">
+                <strong style="display:block;font-size:1.35rem;font-family:var(--font-head);color:#e11d48" th:text="${favoritosCount}">0</strong>
+                <span style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Favoritos</span>
+            </div>
+            <div th:if="${resumenPedidos != null}"
+                 style="text-align:center;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px 18px;box-shadow:var(--shadow)">
+                <strong style="display:block;font-size:1.2rem;font-family:var(--font-head);color:var(--green)"
+                        th:text="'$' + ${#numbers.formatDecimal(resumenPedidos.totalInvertido(), 1, 'POINT', 0, 'COMMA')}">$0</strong>
+                <span style="font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em">Total comprado</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel">
+        <h3><i class="far fa-user"></i> Datos personales y de entrega</h3>
+        <form th:action="@{/cliente/perfil/datos}" method="post" class="form-grid">
+            <label>Nombre completo
+                <input name="nombre" type="text" required minlength="3" maxlength="120" th:value="${usuario.nombre}">
+            </label>
+            <label>Correo electrónico
+                <input type="email" th:value="${usuario.correo}" disabled title="El correo no se modifica desde aquí">
+            </label>
+            <label>Teléfono
+                <input name="telefono" type="tel" maxlength="20" pattern="[0-9+\-() ]{7,20}"
+                       placeholder="313 000 0000" th:value="${usuario.telefono}">
+            </label>
+            <label>Ciudad
+                <input name="ciudad" type="text" maxlength="100" placeholder="Bogotá, Medellín…" th:value="${usuario.ciudad}">
+            </label>
+            <label class="full">Dirección de entrega habitual
+                <textarea name="direccion" rows="2" maxlength="255"
+                          placeholder="Calle, número, barrio…" th:text="${usuario.direccion}"></textarea>
+            </label>
+            <div class="full">
+                <button class="price-apply" type="submit"><i class="fas fa-floppy-disk"></i> Guardar cambios</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="panel">
+        <h3><i class="fas fa-shield-halved"></i> Seguridad</h3>
+        <p class="muted" th:if="${!tieneContrasena}">
+            Tu cuenta se creó con Google: puedes fijar una contraseña para entrar también con correo.
+        </p>
+        <form th:action="@{/cliente/perfil/contrasena}" method="post" class="form-grid">
+            <label th:if="${tieneContrasena}" class="full">Contraseña actual
+                <input name="actual" type="password" autocomplete="current-password" required>
+            </label>
+            <label>Nueva contraseña
+                <input name="nueva" type="password" minlength="6" autocomplete="new-password" required>
+            </label>
+            <label>Confirmar nueva contraseña
+                <input name="confirmar" type="password" minlength="6" autocomplete="new-password" required>
+            </label>
+            <div class="full">
+                <button class="price-apply" type="submit">
+                    <i class="fas fa-key"></i> <span th:text="${tieneContrasena} ? 'Cambiar contraseña' : 'Crear contraseña'"></span>
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <div class="panel quick-links">
+        <h3><i class="fas fa-bolt"></i> Accesos rápidos</h3>
+        <div class="quick-row">
+            <a th:href="@{/cliente/pedidos}"><i class="fas fa-box"></i> Mis pedidos</a>
+            <a th:href="@{/cliente/favoritos}"><i class="far fa-heart"></i> Mis favoritos</a>
+            <a th:href="@{/cliente/carrito}"><i class="fas fa-shopping-bag"></i> Mi carrito</a>
+        </div>
+    </div>
+</main>
+</body>
+</html>

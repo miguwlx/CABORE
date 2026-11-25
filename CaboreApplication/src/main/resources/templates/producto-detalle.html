@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${producto.nombre} + ' — Caboré'">Producto</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" th:href="@{/CSS/cliente.css}">
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-glow a"></div>
+<div class="bg-glow b"></div>
+
+<nav th:replace="~{fragments/cliente-nav :: navbar}"></nav>
+
+<main class="page">
+    <div class="flash ok" th:if="${flashOk}"><i class="fas fa-check-circle"></i> <span th:text="${flashOk}"></span></div>
+    <div class="flash err" th:if="${flashErr}"><i class="fas fa-exclamation-circle"></i> <span th:text="${flashErr}"></span></div>
+
+    <a class="back-link" th:href="@{/cliente}">← Volver al catálogo</a>
+
+    <div class="detail-card">
+        <div class="detail-img">
+            <img th:if="${producto.rutaImagen != null}" th:src="${producto.rutaImagen}" th:alt="${producto.nombre}">
+            <div class="no-img" th:unless="${producto.rutaImagen != null}"><i class="fas fa-box-open"></i></div>
+            <span class="badge-oferta" th:if="${producto.tieneOferta}" th:text="'-' + ${producto.descuento} + '%'">-0%</span>
+        </div>
+        <div class="detail-info">
+            <div class="modal-cat" th:if="${producto.categoriaId != null}"
+                 th:text="${cats != null and cats.containsKey(producto.categoriaId)} ? ${cats.get(producto.categoriaId)} : ''"></div>
+            <h1 class="detail-name" th:text="${producto.nombre}">Producto</h1>
+            <div class="modal-store">
+                <span class="prod-store-dot" th:style="'background:' + (${producto.tienda.color} ?: '#888')"></span>
+                <a th:href="@{/tienda/{id}(id=${producto.tienda.id})}" th:text="${producto.tienda.nombre}">Tienda</a>
+            </div>
+
+            <div class="prod-rating" th:if="${producto.ratingPromedio != null and producto.ratingPromedio > 0}">
+                <th:block th:each="i : ${#numbers.sequence(1, 5)}">
+                    <i th:class="${i <= producto.ratingPromedio + 0.49} ? 'fas fa-star' : 'far fa-star'"></i>
+                </th:block>
+                <span th:text="${#numbers.formatDecimal(producto.ratingPromedio, 1, 1)} + ' · ' + ${producto.totalResenas} + (${producto.totalResenas == 1 ? ' reseña' : ' reseñas'})"></span>
+            </div>
+            <div class="prod-rating" th:unless="${producto.ratingPromedio != null and producto.ratingPromedio > 0}">
+                <i class="far fa-star"></i><i class="far fa-star"></i><i class="far fa-star"></i><i class="far fa-star"></i><i class="far fa-star"></i>
+                <span>Sin reseñas todavía</span>
+            </div>
+
+            <div class="modal-price-row">
+                <span class="modal-price" th:classappend="${producto.tieneOferta} ? 'oferta'"
+                      th:text="'$' + ${#numbers.formatDecimal(producto.precioActual, 1, 'POINT', 0, 'COMMA')}">$0</span>
+                <span class="modal-price-old" th:if="${producto.tieneOferta}"
+                      th:text="'$' + ${#numbers.formatDecimal(producto.precio, 1, 'POINT', 0, 'COMMA')}">$0</span>
+                <span class="modal-stock" th:text="${producto.stock > 0} ? 'Stock: ' + ${producto.stock} : 'Agotado'"
+                      th:style="${producto.stock > 0} ? '' : 'color:#b91c1c;background:rgba(220,38,38,.10)'"></span>
+            </div>
+
+            <p class="modal-desc" th:text="${producto.descripcion} ?: 'Sin descripción.'">Descripción</p>
+
+            <div class="modal-actions">
+                <form th:action="@{/cliente/carrito/agregar}" method="post" class="inline-form"
+                      th:with="volverUrl='|/cliente/producto/${producto.id}|'">
+                    <input type="hidden" name="productoId" th:value="${producto.id}">
+                    <input type="hidden" name="volver" th:value="${volverUrl}">
+                    <label class="qty-label" for="cantidad">Cantidad</label>
+                    <input class="qty-input" id="cantidad" type="number" name="cantidad" min="1"
+                           th:max="${producto.stock}" value="1">
+                    <button type="submit" class="modal-btn-cart" th:disabled="${producto.stock <= 0}">
+                        <i class="fas fa-bag-shopping"></i> Agregar al carrito
+                    </button>
+                </form>
+                <form th:action="@{/cliente/favoritos/toggle}" method="post" class="inline-form">
+                    <input type="hidden" name="productoId" th:value="${producto.id}">
+                    <input type="hidden" name="volver" th:value="'/cliente/producto/' + ${producto.id}">
+                    <button type="submit" class="fav-chip" th:classappend="${esFavorito} ? 'active'">
+                        <i th:class="${esFavorito} ? 'fas fa-heart' : 'far fa-heart'"></i>
+                        <span th:text="${esFavorito} ? 'En favoritos' : 'Guardar en favoritos'"></span>
+                    </button>
+                </form>
+                <a class="fav-chip" th:href="@{/chat/iniciar(tiendaId=${producto.tienda.id})}">
+                    <i class="far fa-comment-dots"></i> Chatear con la tienda
+                </a>
+                <a class="modal-btn-wa" th:if="${producto.tienda.whatsapp}" target="_blank" rel="noopener"
+                   th:href="'https://wa.me/' + ${producto.tienda.whatsapp.replaceAll('[^0-9]', '')} + '?text=' + ${'Hola! Me interesa: ' + producto.nombre + ' (Caboré)'}">
+                    <i class="fab fa-whatsapp"></i> Contactar
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── Reseñas ─────────────────────────────────────────── -->
+    <section class="reviews">
+        <div class="section-header">
+            <h2>Reseñas y calificaciones</h2>
+            <span th:text="${#lists.size(resenas)} + (${#lists.size(resenas) == 1 ? ' reseña' : ' reseñas'})">0 reseñas</span>
+        </div>
+
+        <!-- Formulario de reseña (solo con compra entregada) -->
+        <div class="review-form-box" th:if="${puedeResenar}">
+            <h3 th:text="${miResena == null} ? 'Escribe tu reseña' : 'Edita tu reseña'">Escribe tu reseña</h3>
+            <form th:action="@{/cliente/resenas}" method="post" class="review-form">
+                <input type="hidden" name="productoId" th:value="${producto.id}">
+                <div class="stars-select">
+                    <label th:each="i : ${#numbers.sequence(1, 5)}" class="star-option">
+                        <input type="radio" name="calificacion" th:value="${i}" required
+                               th:checked="${miResena != null ? miResena.calificacion == i : i == 5}">
+                        <i class="fas fa-star"></i>
+                    </label>
+                </div>
+                <textarea name="comentario" rows="3" maxlength="1000" required
+                          placeholder="¿Cómo te fue con este producto? Tu opinión ayuda a otros clientes…"
+                          th:text="${miResena != null} ? ${miResena.comentario} : ''"></textarea>
+                <div class="review-form-actions">
+                    <button type="submit" class="price-apply"><i class="fas fa-paper-plane"></i>
+                        <span th:text="${miResena == null} ? 'Publicar reseña' : 'Actualizar reseña'">Publicar reseña</span>
+                    </button>
+                    <a th:if="${miResena != null}" th:href="@{/cliente/producto/{id}(id=${producto.id})}"
+                       class="reset-filters" style="margin-left:10px">Cancelar edición</a>
+                </div>
+            </form>
+            <form th:if="${miResena != null}" th:action="@{/cliente/resenas/{id}/eliminar(id=${miResena.id})}" method="post" class="inline-form">
+                <input type="hidden" name="productoId" th:value="${producto.id}">
+                <button type="submit" class="link-danger" onclick="return confirm('¿Eliminar tu reseña?')">
+                    <i class="fas fa-trash"></i> Eliminar mi reseña
+                </button>
+            </form>
+        </div>
+        <div class="review-notice" th:unless="${puedeResenar}">
+            <i class="fas fa-circle-info"></i>
+            Solo puedes reseñar este producto cuando tengas un <strong>pedido entregado</strong> que lo incluya.
+        </div>
+
+        <!-- Lista de reseñas -->
+        <div class="review-list" th:if="${!#lists.isEmpty(resenas)}">
+            <div class="review-item" th:each="r : ${resenas}">
+                <div class="review-avatar" th:text="${#strings.isEmpty(r.usuario.nombre) ? 'C' : #strings.toUpperCase(#strings.substring(r.usuario.nombre, 0, 1))}">C</div>
+                <div class="review-content">
+                    <div class="review-head">
+                        <strong th:text="${r.usuario.nombre}">Cliente</strong>
+                        <span class="review-stars">
+                            <i th:each="i : ${#numbers.sequence(1, 5)}"
+                               th:class="${i <= r.calificacion} ? 'fas fa-star' : 'far fa-star'"></i>
+                        </span>
+                        <span class="review-date" th:text="${#temporals.format(r.creadoEn, 'dd/MM/yyyy')}">fecha</span>
+                    </div>
+                    <p th:text="${r.comentario}">Comentario</p>
+                </div>
+            </div>
+        </div>
+        <div class="empty" th:if="${#lists.isEmpty(resenas)}">
+            <i class="far fa-star"></i>
+            <h3>Sin reseñas</h3>
+            <p>Sé el primero en calificar este producto cuando lo recibas.</p>
+        </div>
+    </section>
+
+    <!-- ── Productos relacionados ──────────────────────────── -->
+    <section class="related-section" th:if="${!#lists.isEmpty(relacionados)}" style="margin-top:32px">
+        <div class="section-header">
+            <h2>✨ Productos relacionados</h2>
+            <span>De la misma categoría o tienda</span>
+        </div>
+        <div class="product-grid">
+            <div class="prod-card" th:each="rel : ${relacionados}">
+                <div class="prod-img-wrap">
+                    <a th:href="@{/cliente/producto/{id}(id=${rel.id})}">
+                        <img th:if="${rel.rutaImagen != null}" th:src="${rel.rutaImagen}" th:alt="${rel.nombre}" loading="lazy">
+                        <div class="no-img" th:unless="${rel.rutaImagen != null}"><i class="fas fa-box-open"></i></div>
+                    </a>
+                    <span class="badge-oferta" th:if="${rel.tieneOferta}" th:text="'-' + ${rel.descuento} + '%'">-0%</span>
+                </div>
+                <div class="prod-body">
+                    <div class="prod-store">
+                        <span class="prod-store-dot" th:style="'background:' + (${rel.tienda.color} ?: '#888')"></span>
+                        <a th:href="@{/tienda/{id}(id=${rel.tienda.id})}" th:text="${rel.tienda.nombre}">Tienda</a>
+                    </div>
+                    <div class="prod-name">
+                        <a th:href="@{/cliente/producto/{id}(id=${rel.id})}" th:text="${rel.nombre}">Producto</a>
+                    </div>
+                    <div class="prod-rating" th:if="${rel.ratingPromedio != null and rel.ratingPromedio > 0}">
+                        <th:block th:each="i : ${#numbers.sequence(1, 5)}">
+                            <i th:class="${i <= rel.ratingPromedio + 0.49} ? 'fas fa-star' : 'far fa-star'"></i>
+                        </th:block>
+                        <span th:text="'(' + ${rel.totalResenas} + ')'">(0)</span>
+                    </div>
+                    <div class="prod-price-row">
+                        <span class="prod-price" th:classappend="${rel.tieneOferta} ? 'oferta'"
+                              th:text="'$' + ${#numbers.formatDecimal(rel.precioActual, 1, 'POINT', 0, 'COMMA')}">$0</span>
+                        <span class="prod-price-old" th:if="${rel.tieneOferta}"
+                              th:text="'$' + ${#numbers.formatDecimal(rel.precio, 1, 'POINT', 0, 'COMMA')}">$0</span>
+                    </div>
+                </div>
+                <div class="prod-footer">
+                    <form th:action="@{/cliente/carrito/agregar}" method="post" class="inline-form" style="flex:1">
+                        <input type="hidden" name="productoId" th:value="${rel.id}">
+                        <input type="hidden" name="cantidad" value="1">
+                        <input type="hidden" name="volver" th:value="'/cliente/producto/' + ${producto.id}">
+                        <button type="submit" class="btn-cart" th:disabled="${rel.stock <= 0}">
+                            <i class="fas fa-bag-shopping"></i> Agregar
+                        </button>
+                    </form>
+                    <a class="btn-ficha" th:href="@{/cliente/producto/{id}(id=${rel.id})}">Ver</a>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+</body>
+</html>

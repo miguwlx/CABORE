@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="_csrf" th:content="${_csrf.token}">
+<meta name="_csrf_header" th:content="${_csrf.headerName}">
 <title>Caboré — Crear cuenta</title>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" th:href="@{/CSS/registro.css}">
@@ -21,7 +23,7 @@
 
   <!-- Left visual -->
   <div class="visual">
-    <div class="logo">Caboré</em></div>
+    <a th:href="@{/}" class="logo" style="text-decoration:none;display:inline-block">Cabo<em>ré</em></a>
 
     <h1>Únete a la<br>comunidad<br><em>emprendedora.</em></h1>
     <p class="visual-desc">Crea tu cuenta en menos de un minuto y empieza a comprar o vender hoy mismo.</p>
@@ -63,8 +65,7 @@
     </div>
 
     <div class="form-body">
-      <p th:if="${error}" th:text="${error}" style="color:#ef4444"></p>
-      <p th:if="${error}" th:text="${error}" style="color:#ef4444"></p>
+      <p id="err-registro" th:text="${error}" th:style="${error != null} ? 'color:#ef4444;display:block;margin-bottom:10px' : 'color:#ef4444;display:none;margin-bottom:10px'"></p>
       <form th:action="@{/registro}" method="POST" id="regForm">
 
         <div class="form-row">
@@ -83,12 +84,15 @@
 
         <div class="form-row">
           <label class="form-label">Contraseña</label>
-          <div class="input-wrap">
-            <input type="password" name="contrasena" id="pwdInput" placeholder="Mínimo 6 caracteres" required minlength="6" autocomplete="new-password" oninput="checkStrength(this.value)">
+          <div class="input-wrap" style="position:relative">
+            <input type="password" name="contrasena" id="pwdInput" placeholder="Mínimo 6 caracteres" required minlength="6" autocomplete="new-password" oninput="checkStrength(this.value)" style="padding-right:42px">
+            <button type="button" onclick="toggleRegPwd(this)" aria-label="Mostrar contraseña"
+                    style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:15px">👁</button>
           </div>
           <div class="strength-bar">
             <div class="strength-fill" id="strengthFill"></div>
           </div>
+          <div id="strengthLabel" style="font-size:11.5px;color:rgba(28,24,16,0.55);margin-top:4px"></div>
         </div>
 
         <div class="form-row">
@@ -113,9 +117,9 @@
           Crear mi cuenta →
         </button>
 
-        <div style="margin:18px 0;text-align:center">
+        <div style="margin:18px 0;display:flex;flex-direction:column;align-items:center">
           <div id="g_id_onload"
-               data-client_id="853981485167-vsbi9h44ktc32d6c6ppipnls9fc6iqh7.apps.googleusercontent.com"
+               th:attr="data-client_id=${googleClientId ?: '853981485167-vsbi9h44ktc32d6c6ppipnls9fc6iqh7.apps.googleusercontent.com'}"
                data-callback="handleGoogleCredential">
           </div>
           <div class="g_id_signin" data-type="standard" data-shape="pill" data-width="300"></div>
@@ -137,9 +141,18 @@
 </div>
 
 <script>
+function toggleRegPwd(btn) {
+  const input = document.getElementById('pwdInput');
+  if (!input) return;
+  const show = input.type === 'password';
+  input.type = show ? 'text' : 'password';
+  btn.textContent = show ? '🙈' : '👁';
+}
+
 /* ── Password strength ── */
 function checkStrength(val) {
-  const fill = document.getElementById('strengthFill');
+  const fill  = document.getElementById('strengthFill');
+  const label = document.getElementById('strengthLabel');
   let score = 0;
   if (val.length >= 6)  score++;
   if (val.length >= 10) score++;
@@ -148,9 +161,14 @@ function checkStrength(val) {
   if (/[^A-Za-z0-9]/.test(val)) score++;
 
   const pct    = (score / 5) * 100;
-  const colors = ['#ef4444','#f97316','#eab308','#22c981','#22c981'];
+  const colors = ['#ef4444','#f97316','#eab308','#22c981','#0f9d63'];
+  const textos = ['Seguridad: Muy débil', 'Seguridad: Débil', 'Seguridad: Media', 'Seguridad: Fuerte', 'Seguridad: Excelente'];
   fill.style.width      = pct + '%';
   fill.style.background = colors[score - 1] || 'transparent';
+  if (label) {
+    label.textContent = val.length > 0 ? (textos[score - 1] || textos[0]) : '';
+    label.style.color = colors[score - 1] || 'rgba(28,24,16,0.55)';
+  }
 }
 
 /* ── Animated grid ── */

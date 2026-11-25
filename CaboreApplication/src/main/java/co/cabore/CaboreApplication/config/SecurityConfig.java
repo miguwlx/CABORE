@@ -7,6 +7,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -30,7 +31,27 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        BCryptPasswordEncoder bcrypt = new BCryptPasswordEncoder();
+        return new PasswordEncoder() {
+            @Override
+            public String encode(CharSequence rawPassword) {
+                return bcrypt.encode(rawPassword);
+            }
+
+            @Override
+            public boolean matches(CharSequence rawPassword, String encodedPassword) {
+                if (rawPassword == null || encodedPassword == null || encodedPassword.isBlank()) {
+                    return false;
+                }
+                if (encodedPassword.startsWith("$2a$")
+                        || encodedPassword.startsWith("$2b$")
+                        || encodedPassword.startsWith("$2y$")) {
+                    return bcrypt.matches(rawPassword, encodedPassword);
+                }
+                // Fallback de compatibilidad con login.php para cuentas legacy sin hash BCrypt
+                return encodedPassword.equals(rawPassword.toString());
+            }
+        };
     }
 
     @Bean
@@ -53,14 +74,24 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.disable()) // pendiente reactivar cuando los formularios tengan token CSRF
+            // Habilitado para toda la aplicación. Thymeleaf añade el hidden input
+            // a los formularios th:action y las peticiones AJAX envían el token
+            // de sesión en el header indicado por Spring Security.
+            .csrf(Customizer.withDefaults())
             .securityContext(sc -> sc.securityContextRepository(securityContextRepository()))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/", "/landing", "/login", "/registro",
-                                 "/CSS/**", "/JS/**", "/images/**", "/favicon.ico").permitAll()
-                .requestMatchers("/cliente", "/tienda/**").hasRole("CLIENTE")
-                .requestMatchers("/emprendedor/**").hasRole("EMPRENDEDOR")
-                .requestMatchers("/admin/**").hasRole("ADMINISTRADOR")
+                .requestMatchers("/", "/landing", "/login", "/registro", "/tienda/**",
+                                 "/olvide-password", "/olvide_password.html",
+                                 "/restablecer-password", "/restablecer_password.php",
+                                 "/auth/google", "/google_auth.php",
+                                 "/crear-admin", "/crear_admin.php",
+                                 "/CSS/**", "/JS/**", "/images/**", "/img/**", "/favicon.ico").permitAll()
+                .requestMatchers("/chat", "/chat/**").hasAnyRole("CLIENTE", "EMPRENDEDOR")
+                // FASE 3 (cliente): todo el módulo vive bajo /cliente/** y requiere rol cliente.
+                // Las operaciones filtran además por el usuario autenticado en los servicios.
+                .requestMatchers("/cliente", "/cliente/**").hasRole("CLIENTE")
+                .requestMatchers("/emprendedor", "/emprendedor/**").hasRole("EMPRENDEDOR")
+                .requestMatchers("/admin", "/admin/**").hasRole("ADMINISTRADOR")
                 .anyRequest().authenticated()
             )
             .formLogin(form -> form

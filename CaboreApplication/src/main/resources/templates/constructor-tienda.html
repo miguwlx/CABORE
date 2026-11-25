@@ -1,0 +1,1608 @@
+<!DOCTYPE html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="'Constructor Visual — ' + ${tienda.nombre} + ' | Caboré'">Constructor de Tienda — Caboré</title>
+    <meta name="_csrf" th:content="${_csrf.token}">
+    <meta name="_csrf_header" th:content="${_csrf.headerName}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Sans:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root {
+            --b-bg: #0f111a;
+            --b-panel: #161926;
+            --b-panel-2: #1e2233;
+            --b-border: rgba(255,255,255,0.10);
+            --b-text: #f3f4f6;
+            --b-muted: #9ca3af;
+            --b-gold: #c9a84c;
+            --b-gold-dk: #a8832a;
+            --b-green: #10b981;
+            --b-amber: #f59e0b;
+            --b-red: #ef4444;
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Plus Jakarta Sans', 'DM Sans', system-ui, sans-serif;
+            background: var(--b-bg);
+            color: var(--b-text);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ── Barra Superior del Constructor ── */
+        .builder-topbar {
+            height: 60px;
+            background: var(--b-panel);
+            border-bottom: 1px solid var(--b-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 18px;
+            gap: 12px;
+            flex-shrink: 0;
+            z-index: 50;
+        }
+        .topbar-left, .topbar-center, .topbar-right {
+            display: flex; align-items: center; gap: 10px;
+        }
+        .back-btn {
+            display: inline-flex; align-items: center; gap: 7px;
+            color: var(--b-muted); text-decoration: none; font-size: 13px; font-weight: 600;
+            padding: 7px 12px; border-radius: 8px; border: 1px solid var(--b-border);
+            background: var(--b-panel-2); transition: all .15s;
+        }
+        .back-btn:hover { color: #fff; border-color: var(--b-gold); }
+        .builder-brand {
+            font-family: 'Playfair Display', serif; font-size: 17px; font-weight: 800; color: #fff;
+        }
+        .builder-brand span { color: var(--b-gold); }
+
+        .status-indicator {
+            display: inline-flex; align-items: center; gap: 7px;
+            padding: 5px 11px; border-radius: 99px; font-size: 11.5px; font-weight: 700;
+            border: 1px solid var(--b-border); background: var(--b-panel-2);
+        }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--b-green); }
+        .status-indicator.dirty .status-dot { background: var(--b-amber); box-shadow: 0 0 8px var(--b-amber); }
+        .status-indicator.draft .status-dot { background: #38bdf8; }
+
+        .device-switcher {
+            display: flex; background: var(--b-bg); padding: 3px; border-radius: 10px;
+            border: 1px solid var(--b-border);
+        }
+        .device-btn {
+            background: transparent; border: none; color: var(--b-muted);
+            padding: 6px 12px; border-radius: 7px; font-size: 12px; font-weight: 600;
+            cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+            transition: all .15s;
+        }
+        .device-btn.active { background: var(--b-panel-2); color: var(--b-gold); }
+
+        .action-btn {
+            padding: 8px 13px; border-radius: 9px; font-size: 12.5px; font-weight: 700;
+            cursor: pointer; border: 1px solid var(--b-border); background: var(--b-panel-2);
+            color: var(--b-text); display: inline-flex; align-items: center; gap: 6px;
+            text-decoration: none; transition: all .15s;
+        }
+        .action-btn:hover:not(:disabled) { border-color: var(--b-gold); color: #fff; }
+        .action-btn:disabled { opacity: .45; cursor: not-allowed; }
+        .action-btn.primary {
+            background: linear-gradient(135deg, var(--b-gold), var(--b-gold-dk));
+            color: #0d0d14; border-color: transparent;
+        }
+        .action-btn.primary:hover { filter: brightness(1.08); color: #0d0d14; }
+
+        /* ── Área Principal Dividida (Panel Izquierdo + Vista Previa Derecha) ── */
+        .builder-workspace {
+            flex: 1;
+            display: flex;
+            min-height: 0;
+            overflow: hidden;
+        }
+
+        /* Barra vertical de categorías del editor */
+        .builder-rail {
+            width: 74px;
+            background: var(--b-panel);
+            border-right: 1px solid var(--b-border);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 12px 6px;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        .rail-btn {
+            width: 62px; padding: 10px 4px; border-radius: 11px;
+            background: transparent; border: 1px solid transparent;
+            color: var(--b-muted); cursor: pointer;
+            display: flex; flex-direction: column; align-items: center; gap: 5px;
+            font-size: 10px; font-weight: 700; text-align: center; transition: all .15s;
+        }
+        .rail-btn i { font-size: 16px; }
+        .rail-btn:hover { color: #fff; background: rgba(255,255,255,0.04); }
+        .rail-btn.active {
+            background: rgba(201,168,76,0.14);
+            border-color: rgba(201,168,76,0.45);
+            color: var(--b-gold);
+        }
+
+        /* Panel izquierdo de controles */
+        .builder-controls {
+            width: 380px;
+            background: var(--b-panel);
+            border-right: 1px solid var(--b-border);
+            overflow-y: auto;
+            padding: 20px 18px 60px;
+            flex-shrink: 0;
+        }
+        .ctrl-pane { display: none; }
+        .ctrl-pane.active { display: block; }
+        .pane-title {
+            font-size: 16px; font-weight: 800; margin-bottom: 4px; color: #fff;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .pane-sub { font-size: 12px; color: var(--b-muted); margin-bottom: 18px; line-height: 1.45; }
+
+        .ctrl-group {
+            background: var(--b-panel-2);
+            border: 1px solid var(--b-border);
+            border-radius: 12px;
+            padding: 14px;
+            margin-bottom: 14px;
+        }
+        .ctrl-group-title {
+            font-size: 11.5px; font-weight: 800; text-transform: uppercase;
+            letter-spacing: .06em; color: var(--b-gold); margin-bottom: 12px;
+        }
+        .ctrl-field { margin-bottom: 12px; }
+        .ctrl-field:last-child { margin-bottom: 0; }
+        .ctrl-label {
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 12px; font-weight: 600; color: #d1d5db; margin-bottom: 6px;
+        }
+        .ctrl-input, .ctrl-select, .ctrl-textarea {
+            width: 100%; padding: 9px 11px; border-radius: 8px;
+            border: 1px solid var(--b-border); background: var(--b-bg);
+            color: #fff; font-family: inherit; font-size: 13px;
+        }
+        .ctrl-textarea { resize: vertical; min-height: 64px; }
+        .ctrl-input:focus, .ctrl-select:focus, .ctrl-textarea:focus {
+            outline: none; border-color: var(--b-gold);
+        }
+
+        .color-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+        }
+        .color-item {
+            display: flex; align-items: center; gap: 8px;
+            background: var(--b-bg); padding: 6px 8px; border-radius: 8px;
+            border: 1px solid var(--b-border);
+        }
+        .color-item input[type="color"] {
+            width: 28px; height: 28px; border: none; border-radius: 6px;
+            background: transparent; cursor: pointer; padding: 0;
+        }
+        .color-item span { font-size: 11.5px; font-weight: 600; color: #d1d5db; }
+
+        /* Tarjetas de selección de plantilla */
+        .template-cards {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+        }
+        .tpl-card {
+            padding: 10px; border-radius: 10px; border: 1.5px solid var(--b-border);
+            background: var(--b-bg); cursor: pointer; text-align: left; color: #fff;
+            transition: all .15s;
+        }
+        .tpl-card:hover { border-color: rgba(201,168,76,0.5); }
+        .tpl-card.active {
+            border-color: var(--b-gold);
+            background: rgba(201,168,76,0.12);
+        }
+        .tpl-swatches { display: flex; gap: 4px; margin-bottom: 6px; }
+        .tpl-swatch { width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.25); }
+        .tpl-name { font-size: 12.5px; font-weight: 700; display: block; }
+        .tpl-desc { font-size: 10.5px; color: var(--b-muted); }
+
+        /* Switches e ítems de secciones */
+        .switch-row {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.06);
+            font-size: 12.5px;
+        }
+        .switch-row:last-child { border-bottom: none; }
+        .switch-row input[type="checkbox"] {
+            width: 17px; height: 17px; accent-color: var(--b-gold); cursor: pointer;
+        }
+
+        .sec-builder-item {
+            background: var(--b-bg); border: 1px solid var(--b-border);
+            border-radius: 10px; padding: 10px 12px; margin-bottom: 8px;
+        }
+        .sec-builder-top {
+            display: flex; align-items: center; justify-content: space-between; gap: 8px;
+        }
+        .sec-builder-name {
+            font-size: 12.5px; font-weight: 700; display: flex; align-items: center; gap: 8px;
+        }
+        .sec-order-btns { display: flex; gap: 4px; }
+        .sec-mini-btn {
+            width: 26px; height: 26px; border-radius: 6px; border: 1px solid var(--b-border);
+            background: var(--b-panel-2); color: var(--b-text); cursor: pointer;
+            font-size: 11px; display: inline-flex; align-items: center; justify-content: center;
+        }
+        .sec-mini-btn:hover { border-color: var(--b-gold); color: var(--b-gold); }
+        .sec-builder-edit {
+            margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--b-border);
+            display: none;
+        }
+        .sec-builder-item.expanded .sec-builder-edit { display: block; }
+
+        /* ── Lienzo Derecho: Vista Previa Interactiva en Tiempo Real ── */
+        .builder-canvas-wrap {
+            flex: 1;
+            background: #08090e;
+            background-image: radial-gradient(rgba(255,255,255,0.08) 1px, transparent 1px);
+            background-size: 22px 22px;
+            overflow: auto;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 20px;
+        }
+        .preview-viewport {
+            width: 100%;
+            min-height: calc(100vh - 100px);
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 25px 70px rgba(0,0,0,0.65);
+            border: 1px solid rgba(255,255,255,0.14);
+            transition: width .28s cubic-bezier(.4,0,.2,1);
+            background: var(--p-bg, #0d0d14);
+            color: var(--p-text, #f5f0e8);
+            font-family: var(--p-font-body, 'DM Sans', sans-serif);
+            font-size: var(--p-base-size, 16px);
+        }
+        .preview-viewport.device-tablet { width: 768px; }
+        .preview-viewport.device-mobile { width: 390px; }
+
+        /* Estilos internos del lienzo de vista previa en vivo */
+        .pv-header {
+            background: var(--p-header-bg, var(--p-surface));
+            border-top: 6px solid var(--p-brand, #c9a84c);
+            border-bottom: 1px solid rgba(128,128,128,0.2);
+            padding: 24px 28px;
+        }
+        .pv-brand-row {
+            display: flex; align-items: center; gap: 16px;
+        }
+        .pv-brand-row.centrado {
+            flex-direction: column; text-align: center;
+        }
+        .pv-logo {
+            width: 72px; height: 72px; border-radius: var(--p-radius, 16px);
+            object-fit: cover; border: 3px solid var(--p-brand, #c9a84c);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 30px; background: var(--p-surface, #161625); flex-shrink: 0;
+        }
+        .pv-eslogan {
+            font-size: .78rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: .08em; color: var(--p-brand, #c9a84c); margin-bottom: 3px;
+        }
+        .pv-title {
+            font-family: var(--p-font-head, 'Playfair Display', serif);
+            font-size: 1.75rem; font-weight: 800;
+        }
+        .pv-desc { font-size: .9rem; opacity: .78; margin-top: 4px; }
+
+        .pv-hero {
+            margin-top: 20px; border-radius: var(--p-radius, 16px);
+            overflow: hidden; position: relative;
+            border: 1px solid rgba(128,128,128,0.22);
+            box-shadow: var(--p-shadow, none);
+            background: linear-gradient(135deg, color-mix(in srgb, var(--p-brand, #c9a84c) 26%, var(--p-surface, #161625)), var(--p-bg, #0d0d14));
+        }
+        .pv-hero-bg {
+            position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;
+        }
+        .pv-hero-overlay {
+            position: absolute; inset: 0; z-index: 1;
+            background: rgba(10, 10, 16, var(--p-overlay, 0.4));
+        }
+        .pv-hero-inner {
+            position: relative; z-index: 2; padding: 36px 32px;
+        }
+        .pv-hero-sub {
+            font-size: .76rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: .1em; color: var(--p-brand, #c9a84c); margin-bottom: 6px;
+        }
+        .pv-hero-title {
+            font-family: var(--p-font-head, serif); font-size: 2rem; font-weight: 800; margin-bottom: 8px;
+        }
+        .pv-hero-text { font-size: .92rem; opacity: .88; max-width: 620px; line-height: 1.55; margin-bottom: 16px; }
+        .pv-btn-cta {
+            display: inline-flex; align-items: center; gap: 7px;
+            padding: 10px 20px; border-radius: var(--p-radius, 12px);
+            background: var(--p-btn-bg, #c9a84c); color: var(--p-btn-text, #0d0d14);
+            font-weight: 700; font-size: .86rem; text-decoration: none; border: none;
+        }
+
+        .pv-main { padding: 28px; }
+        .pv-sec { margin-bottom: 36px; }
+        .pv-sec-head {
+            border-bottom: 1px solid rgba(128,128,128,0.2);
+            padding-bottom: 10px; margin-bottom: 16px;
+        }
+        .pv-sec-head h3 {
+            font-family: var(--p-font-head, serif); font-size: 1.35rem; font-weight: 700;
+        }
+        .pv-sec-head p { font-size: .82rem; opacity: .7; margin-top: 2px; }
+
+        .pv-grid {
+            display: grid;
+            gap: var(--p-gap, 18px);
+            grid-template-columns: repeat(var(--p-cols, 3), minmax(0, 1fr));
+        }
+        .preview-viewport.device-mobile .pv-grid {
+            grid-template-columns: 1fr !important;
+        }
+        .pv-card {
+            background: var(--p-surface, #161625);
+            border: 1px solid rgba(128,128,128,0.22);
+            border-radius: var(--p-radius, 14px);
+            box-shadow: var(--p-shadow, none);
+            overflow: hidden; display: flex; flex-direction: column;
+        }
+        .pv-card.tarjeta-minimal { background: transparent; border: none; box-shadow: none; }
+        .pv-card.tarjeta-bordeada { border: 2px solid var(--p-brand, #c9a84c); }
+        .pv-card-img {
+            height: 170px; background: rgba(128,128,128,0.12); position: relative;
+            display: flex; align-items: center; justify-content: center; font-size: 36px;
+            overflow: hidden;
+        }
+        .pv-card-img img { width: 100%; height: 100%; object-fit: cover; }
+        .pv-badge-oferta {
+            position: absolute; top: 10px; left: 10px;
+            background: var(--p-sec, #e2603f); color: #fff;
+            font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 99px;
+        }
+        .pv-card-body { padding: 14px; flex: 1; display: flex; flex-direction: column; gap: 6px; }
+        .pv-card-title { font-family: var(--p-font-head, serif); font-weight: 700; font-size: .98rem; }
+        .pv-card-desc { font-size: .8rem; opacity: .72; line-height: 1.4; }
+        .pv-card-price { font-family: var(--p-font-head, serif); font-weight: 800; font-size: 1.05rem; color: var(--p-brand, #c9a84c); }
+        .pv-card-btn {
+            margin: 0 14px 14px; padding: 9px 12px;
+            background: var(--p-btn-bg, #c9a84c); color: var(--p-btn-text, #0d0d14);
+            border: 2px solid var(--p-btn-bg, #c9a84c);
+            border-radius: var(--p-radius, 10px);
+            font-weight: 700; font-size: .82rem; text-align: center;
+        }
+        .pv-card-btn.contorno { background: transparent; color: var(--p-btn-bg, #c9a84c); }
+        .pv-card-btn.capsula { border-radius: 999px; }
+        .pv-card-btn.gradiente {
+            background: linear-gradient(135deg, var(--p-btn-bg, #c9a84c), var(--p-sec, #e2603f));
+            border-color: transparent;
+        }
+
+        .pv-footer {
+            border-top: 1px solid rgba(128,128,128,0.2);
+            background: var(--p-header-bg, var(--p-surface));
+            padding: 22px 28px; display: flex; justify-content: space-between;
+            align-items: center; flex-wrap: wrap; gap: 12px; font-size: .82rem;
+        }
+
+        .toast-builder {
+            position: fixed; bottom: 20px; right: 20px; z-index: 999;
+            background: #111827; color: #fff; border: 1px solid var(--b-gold);
+            padding: 12px 18px; border-radius: 12px; font-size: 13px; font-weight: 600;
+            box-shadow: 0 14px 36px rgba(0,0,0,0.45); display: none; align-items: center; gap: 10px;
+        }
+        .toast-builder.show { display: flex; }
+
+        @media (max-width: 1024px) {
+            body { height: auto; overflow: auto; }
+            .builder-workspace { flex-direction: column; overflow: visible; }
+            .builder-rail { width: 100%; flex-direction: row; overflow-x: auto; border-right: none; border-bottom: 1px solid var(--b-border); }
+            .builder-controls { width: 100%; border-right: none; border-bottom: 1px solid var(--b-border); }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ══════════════════════ BARRA SUPERIOR DEL CONSTRUCTOR ══════════════════════ -->
+<header class="builder-topbar">
+    <div class="topbar-left">
+        <a th:href="@{/emprendedor(tab='tienda')}" class="back-btn">
+            <i class="fas fa-arrow-left"></i> Panel
+        </a>
+        <div class="builder-brand">Cabo<span>ré</span> Studio</div>
+        <div class="status-indicator" id="statusBadge"
+             th:classappend="${tieneBorrador} ? 'draft' : ''">
+            <span class="status-dot"></span>
+            <span id="statusText" th:text="${tieneBorrador ? 'Borrador guardado' : 'Publicado al día'}">Publicado al día</span>
+        </div>
+    </div>
+
+    <div class="topbar-center">
+        <div class="device-switcher">
+            <button type="button" class="device-btn active" onclick="cambiarDispositivo('desktop', this)">
+                <i class="fas fa-desktop"></i> Escritorio
+            </button>
+            <button type="button" class="device-btn" onclick="cambiarDispositivo('tablet', this)">
+                <i class="fas fa-tablet-screen-button"></i> Tablet
+            </button>
+            <button type="button" class="device-btn" onclick="cambiarDispositivo('mobile', this)">
+                <i class="fas fa-mobile-screen"></i> Móvil
+            </button>
+        </div>
+    </div>
+
+    <div class="topbar-right">
+        <button type="button" class="action-btn" id="btnDeshacer" onclick="deshacerCambio()" disabled title="Deshacer último cambio">
+            <i class="fas fa-rotate-left"></i> Deshacer
+        </button>
+        <button type="button" class="action-btn" onclick="restaurarPredeterminados()" title="Restaurar diseño original">
+            <i class="fas fa-arrow-rotate-right"></i> Restaurar
+        </button>
+        <button type="button" class="action-btn" onclick="guardarBorrador()" id="btnBorrador">
+            <i class="far fa-floppy-disk"></i> Guardar borrador
+        </button>
+        <a th:href="@{/tienda/{id}(id=${tienda.id}, preview='borrador')}" target="_blank" class="action-btn" title="Abrir tienda en pestaña nueva">
+            <i class="fas fa-up-right-from-square"></i> Ver tienda
+        </a>
+        <button type="button" class="action-btn primary" onclick="publicarCambios()" id="btnPublicar">
+            <i class="fas fa-rocket"></i> Guardar y publicar
+        </button>
+    </div>
+</header>
+
+<!-- ══════════════════════ ÁREA DE TRABAJO DIVIDIDA ══════════════════════ -->
+<div class="builder-workspace">
+
+    <!-- 1. Riel lateral de categorías -->
+    <nav class="builder-rail">
+        <button type="button" class="rail-btn active" onclick="abrirPanel('identidad', this)">
+            <i class="fas fa-palette"></i><span>Identidad</span>
+        </button>
+        <button type="button" class="rail-btn" onclick="abrirPanel('diseno', this)">
+            <i class="fas fa-layer-group"></i><span>Diseño</span>
+        </button>
+        <button type="button" class="rail-btn" onclick="abrirPanel('portada', this)">
+            <i class="fas fa-image"></i><span>Portada</span>
+        </button>
+        <button type="button" class="rail-btn" onclick="abrirPanel('secciones', this)">
+            <i class="fas fa-list-check"></i><span>Secciones</span>
+        </button>
+        <button type="button" class="rail-btn" onclick="abrirPanel('productos', this)">
+            <i class="fas fa-bag-shopping"></i><span>Productos</span>
+        </button>
+        <button type="button" class="rail-btn" onclick="abrirPanel('comercial', this)">
+            <i class="fas fa-share-nodes"></i><span>Comercial</span>
+        </button>
+    </nav>
+
+    <!-- 2. Panel izquierdo de controles -->
+    <aside class="builder-controls">
+
+        <!-- ── PANEL 1: IDENTIDAD DE LA TIENDA ── -->
+        <div class="ctrl-pane active" id="pane-identidad">
+            <div class="pane-title"><i class="fas fa-palette"></i> Identidad de la tienda</div>
+            <p class="pane-sub">Define el nombre comercial, eslogan, logo, paleta de colores y tipografías de tu marca.</p>
+
+            <div class="ctrl-group">
+                <div class="ctrl-group-title">Marca y textos principales</div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Nombre comercial *</label>
+                    <input type="text" class="ctrl-input" id="in-nombre" maxlength="120" oninput="actualizarCampo('nombre', this.value)">
+                </div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Eslogan</label>
+                    <input type="text" class="ctrl-input" id="in-eslogan" maxlength="200" placeholder="Ej: Moda artesanal hecha a mano" oninput="actualizarCampo('eslogan', this.value)">
+                </div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Descripción corta</label>
+                    <textarea class="ctrl-textarea" id="in-descripcion" oninput="actualizarCampo('descripcion', this.value)"></textarea>
+                </div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Ciudad / Sede</label>
+                    <input type="text" class="ctrl-input" id="in-ciudad" maxlength="100" placeholder="Ej: Bogotá, Medellín…" oninput="actualizarCampo('ciudad', this.value)">
+                </div>
+            </div>
+
+            <div class="ctrl-group">
+                <div class="ctrl-group-title">Logo y Favicon</div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Logo de la tienda (JPG, PNG, WEBP, GIF)</label>
+                    <input type="file" class="ctrl-input" accept="image/*" onchange="subirArchivoConstructor('logo', this)">
+                </div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Favicon (icono de pestaña)</label>
+                    <input type="file" class="ctrl-input" accept="image/*" onchange="subirArchivoConstructor('favicon', this)">
+                </div>
+            </div>
+
+            <div class="ctrl-group">
+                <div class="ctrl-group-title">Paleta de colores personalizada</div>
+                <div class="color-grid">
+                    <label class="color-item">
+                        <input type="color" id="in-colorPrimario" oninput="actualizarCampo('colorPrimario', this.value)">
+                        <span>Primario</span>
+                    </label>
+                    <label class="color-item">
+                        <input type="color" id="in-colorSecundario" oninput="actualizarCampo('colorSecundario', this.value)">
+                        <span>Secundario</span>
+                    </label>
+                    <label class="color-item">
+                        <input type="color" id="in-colorFondo" oninput="actualizarCampo('colorFondo', this.value)">
+                        <span>Fondo página</span>
+                    </label>
+                    <label class="color-item">
+                        <input type="color" id="in-colorSuperficie" oninput="actualizarCampo('colorSuperficie', this.value)">
+                        <span>Tarjetas</span>
+                    </label>
+                    <label class="color-item">
+                        <input type="color" id="in-colorTexto" oninput="actualizarCampo('colorTexto', this.value)">
+                        <span>Textos</span>
+                    </label>
+                    <label class="color-item">
+                        <input type="color" id="in-colorEncabezado" oninput="actualizarCampo('colorEncabezado', this.value)">
+                        <span>Encabezado</span>
+                    </label>
+                    <label class="color-item">
+                        <input type="color" id="in-colorBotones" oninput="actualizarCampo('colorBotones', this.value)">
+                        <span>Botones</span>
+                    </label>
+                    <label class="color-item">
+                        <input type="color" id="in-colorTextoBotones" oninput="actualizarCampo('colorTextoBotones', this.value)">
+                        <span>Texto botón</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="ctrl-group">
+                <div class="ctrl-group-title">Tipografías y escala</div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Fuente de títulos y encabezados</label>
+                    <select class="ctrl-select" id="in-fuenteTitulos" onchange="actualizarCampo('fuenteTitulos', this.value)">
+                        <option value="Playfair Display">Playfair Display (Editorial Serif)</option>
+                        <option value="Cormorant Garamond">Cormorant Garamond (Alta Costura)</option>
+                        <option value="Fraunces">Fraunces (Artesanal Contemporánea)</option>
+                        <option value="Outfit">Outfit (Moderna Geométrica)</option>
+                        <option value="Space Grotesk">Space Grotesk (Tech &amp; Urbano)</option>
+                        <option value="Plus Jakarta Sans">Plus Jakarta Sans (Limpia)</option>
+                        <option value="DM Sans">DM Sans (Minimalista)</option>
+                    </select>
+                </div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Fuente de textos y cuerpo</label>
+                    <select class="ctrl-select" id="in-fuenteCuerpo" onchange="actualizarCampo('fuenteCuerpo', this.value)">
+                        <option value="DM Sans">DM Sans</option>
+                        <option value="Plus Jakarta Sans">Plus Jakarta Sans</option>
+                        <option value="Outfit">Outfit</option>
+                        <option value="Inter">Inter</option>
+                    </select>
+                </div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Tamaño general de texto</label>
+                    <select class="ctrl-select" id="in-tamanoTexto" onchange="actualizarCampo('tamanoTexto', this.value)">
+                        <option value="compacto">Compacto (14.5px)</option>
+                        <option value="normal">Normal (16px)</option>
+                        <option value="grande">Amplio (17.5px)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── PANEL 2: DISEÑO Y APARIENCIA ── -->
+        <div class="ctrl-pane" id="pane-diseno">
+            <div class="pane-title"><i class="fas fa-layer-group"></i> Diseño y apariencia</div>
+            <p class="pane-sub">Elige una plantilla profesional como punto de partida o personaliza bordes, sombras y estructura.</p>
+
+            <div class="ctrl-group">
+                <div class="ctrl-group-title">Plantillas profesionales</div>
+                <div class="template-cards">
+                    <button type="button" class="tpl-card" data-tpl="moderna" onclick="aplicarPlantillaPreset('moderna')">
+                        <div class="tpl-swatches">
+                            <span class="tpl-swatch" style="background:#0d0d14"></span>
+                            <span class="tpl-swatch" style="background:#c9a84c"></span>
+                            <span class="tpl-swatch" style="background:#e2603f"></span>
+                        </div>
+                        <span class="tpl-name">✨ Moderna</span>
+                        <span class="tpl-desc">Oscura premium con dorado</span>
+                    </button>
+                    <button type="button" class="tpl-card" data-tpl="minimalista" onclick="aplicarPlantillaPreset('minimalista')">
+                        <div class="tpl-swatches">
+                            <span class="tpl-swatch" style="background:#fafafa"></span>
+                            <span class="tpl-swatch" style="background:#111111"></span>
+                            <span class="tpl-swatch" style="background:#777777"></span>
+                        </div>
+                        <span class="tpl-name">◻️ Minimalista</span>
+                        <span class="tpl-desc">Blanco puro y líneas rectas</span>
+                    </button>
+                    <button type="button" class="tpl-card" data-tpl="elegante" onclick="aplicarPlantillaPreset('elegante')">
+                        <div class="tpl-swatches">
+                            <span class="tpl-swatch" style="background:#f7f2e9"></span>
+                            <span class="tpl-swatch" style="background:#b8923c"></span>
+                            <span class="tpl-swatch" style="background:#2a2118"></span>
+                        </div>
+                        <span class="tpl-name">👑 Elegante</span>
+                        <span class="tpl-desc">Marfil cálido y serif clásico</span>
+                    </button>
+                    <button type="button" class="tpl-card" data-tpl="tecnologica" onclick="aplicarPlantillaPreset('tecnologica')">
+                        <div class="tpl-swatches">
+                            <span class="tpl-swatch" style="background:#090d16"></span>
+                            <span class="tpl-swatch" style="background:#38bdf8"></span>
+                            <span class="tpl-swatch" style="background:#6366f1"></span>
+                        </div>
+                        <span class="tpl-name">💻 Tecnológica</span>
+                        <span class="tpl-desc">Azul neón y contraste cyber</span>
+                    </button>
+                    <button type="button" class="tpl-card" data-tpl="colorida" onclick="aplicarPlantillaPreset('colorida')" style="grid-column:1 / -1">
+                        <div class="tpl-swatches">
+                            <span class="tpl-swatch" style="background:#150a1f"></span>
+                            <span class="tpl-swatch" style="background:#ec4899"></span>
+                            <span class="tpl-swatch" style="background:#a855f7"></span>
+                        </div>
+                        <span class="tpl-name">🌈 Colorida</span>
+                        <span class="tpl-desc">Vibrante, creativa y con bordes orgánicos</span>
+                    </button>
+                </div>
+            </div>
+
+            <div class="ctrl-group">
+                <div class="ctrl-group-title">Bordes, sombras y espaciado</div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Estilo de tarjetas</label>
+                    <select class="ctrl-select" id="in-estiloTarjeta" onchange="actualizarCampo('estiloTarjeta', this.value)">
+                        <option value="elevada">Elevada con sombra</option>
+                        <option value="clasica">Clásica con borde sutil</option>
+                        <option value="minimal">Minimalista sin marco</option>
+                        <option value="bordeada">Borde destacado de marca</option>
+                        <option value="cristal">Cristal translúcido</option>
+                    </select>
+                </div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Redondeo de bordes</label>
+                    <select class="ctrl-select" id="in-radioBordes" onchange="actualizarCampo('radioBordes', this.value)">
+                        <option value="recto">Recto (4px)</option>
+                        <option value="suave">Suave (14px)</option>
+                        <option value="redondeado">Redondeado (22px)</option>
+                        <option value="capsula">Extra redondeado (30px)</option>
+                    </select>
+                </div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Nivel de sombra</label>
+                    <select class="ctrl-select" id="in-nivelSombra" onchange="actualizarCampo('nivelSombra', this.value)">
+                        <option value="ninguna">Sin sombra</option>
+                        <option value="suave">Sombra suave</option>
+                        <option value="media">Sombra media</option>
+                        <option value="intensa">Sombra profunda</option>
+                    </select>
+                </div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Espaciado entre tarjetas</label>
+                    <select class="ctrl-select" id="in-espaciado" onchange="actualizarCampo('espaciado', this.value)">
+                        <option value="compacto">Compacto (12px)</option>
+                        <option value="normal">Normal (18px)</option>
+                        <option value="amplio">Amplio (26px)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="ctrl-group">
+                <div class="ctrl-group-title">Encabezado y pie de página</div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Alineación de encabezado</label>
+                    <select class="ctrl-select" id="in-estiloEncabezado" onchange="actualizarCampo('estiloEncabezado', this.value)">
+                        <option value="centrado">Centrado editorial</option>
+                        <option value="lateral">Lateral moderno</option>
+                        <option value="minimal">Minimalista compacto</option>
+                    </select>
+                </div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Estilo de pie de página</label>
+                    <select class="ctrl-select" id="in-estiloPie" onchange="actualizarCampo('estiloPie', this.value)">
+                        <option value="completo">Completo con eslogan</option>
+                        <option value="minimalista">Minimalista centrado</option>
+                        <option value="columnas">Comercial expandido</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── PANEL 3: EDITOR DE PORTADA (HERO) ── -->
+        <div class="ctrl-pane" id="pane-portada">
+            <div class="pane-title"><i class="fas fa-image"></i> Editor de portada</div>
+            <p class="pane-sub">Configura el banner principal, textos de bienvenida, alineación y botones de llamada a la acción.</p>
+
+            <div class="ctrl-group">
+                <div class="ctrl-group-title">Imagen y diseño de portada</div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Subir imagen de portada (Banner)</label>
+                    <input type="file" class="ctrl-input" accept="image/*" onchange="subirArchivoConstructor('banner', this)">
+                </div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Diseño de portada</label>
+                    <select class="ctrl-select" id="in-portadaDiseno" onchange="actualizarCampo('portadaDiseno', this.value)">
+                        <option value="impacto">Impacto (Banner de fondo completo)</option>
+                        <option value="dividida">Dividida (Texto a la izquierda + Imagen)</option>
+                        <option value="editorial">Editorial con franja lateral</option>
+                        <option value="minimal">Minimalista limpio</option>
+                    </select>
+                </div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Alineación del texto</label>
+                    <select class="ctrl-select" id="in-portadaAlineacion" onchange="actualizarCampo('portadaAlineacion', this.value)">
+                        <option value="izquierda">Izquierda</option>
+                        <option value="centro">Centro</option>
+                        <option value="derecha">Derecha</option>
+                    </select>
+                </div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">
+                        <span>Oscurecer fondo (Overlay)</span>
+                        <span id="lbl-overlay">40%</span>
+                    </label>
+                    <input type="range" min="0" max="85" step="5" id="in-portadaOverlay"
+                           style="width:100%;accent-color:var(--b-gold)"
+                           oninput="document.getElementById('lbl-overlay').textContent=this.value+'%'; actualizarCampo('portadaOverlay', parseInt(this.value,10))">
+                </div>
+            </div>
+
+            <div class="ctrl-group">
+                <div class="ctrl-group-title">Textos de portada</div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Subtítulo superior</label>
+                    <input type="text" class="ctrl-input" id="in-portadaSubtitulo" maxlength="220" placeholder="Ej: Nueva colección 2026" oninput="actualizarCampo('portadaSubtitulo', this.value)">
+                </div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Título principal</label>
+                    <input type="text" class="ctrl-input" id="in-portadaTitulo" maxlength="180" placeholder="Título de impacto" oninput="actualizarCampo('portadaTitulo', this.value)">
+                </div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Descripción de portada</label>
+                    <textarea class="ctrl-textarea" id="in-portadaDescripcion" oninput="actualizarCampo('portadaDescripcion', this.value)"></textarea>
+                </div>
+            </div>
+
+            <div class="ctrl-group">
+                <div class="ctrl-group-title">Botones de portada (CTA)</div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Texto botón principal</label>
+                    <input type="text" class="ctrl-input" id="in-portadaBotonTexto" maxlength="80" oninput="actualizarCampo('portadaBotonTexto', this.value)">
+                </div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Enlace botón principal</label>
+                    <input type="text" class="ctrl-input" id="in-portadaBotonUrl" placeholder="#seccion-catalogo" oninput="actualizarCampo('portadaBotonUrl', this.value)">
+                </div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Texto botón secundario (opcional)</label>
+                    <input type="text" class="ctrl-input" id="in-portadaBoton2Texto" maxlength="80" oninput="actualizarCampo('portadaBoton2Texto', this.value)">
+                </div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Enlace botón secundario</label>
+                    <input type="text" class="ctrl-input" id="in-portadaBoton2Url" placeholder="#seccion-contacto" oninput="actualizarCampo('portadaBoton2Url', this.value)">
+                </div>
+            </div>
+        </div>
+
+        <!-- ── PANEL 4: CONSTRUCTOR DE SECCIONES ── -->
+        <div class="ctrl-pane" id="pane-secciones">
+            <div class="pane-title"><i class="fas fa-list-check"></i> Constructor de secciones</div>
+            <p class="pane-sub">Activa, oculta, cambia títulos o reorganiza el orden de aparición de las secciones en tu tienda pública.</p>
+
+            <div class="ctrl-group">
+                <div class="ctrl-group-title">Orden y visibilidad de bloques</div>
+                <div id="listaSeccionesBuilder"></div>
+            </div>
+
+            <div class="ctrl-group">
+                <div class="ctrl-group-title">Galería de imágenes de la tienda</div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Agregar foto a la galería</label>
+                    <input type="file" class="ctrl-input" accept="image/*" onchange="subirArchivoConstructor('galeria', this)">
+                </div>
+                <div id="galeriaThumbsBuilder" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"></div>
+            </div>
+
+            <div class="ctrl-group">
+                <div class="ctrl-group-title">Agregar testimonio destacado</div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Nombre del cliente</label>
+                    <input type="text" class="ctrl-input" id="testimonioAutorInput" placeholder="Ej: Laura Gómez">
+                </div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Comentario</label>
+                    <textarea class="ctrl-textarea" id="testimonioTextoInput" placeholder="Ej: Excelente calidad y atención muy rápida."></textarea>
+                </div>
+                <button type="button" class="action-btn" style="width:100%;justify-content:center" onclick="agregarTestimonioManual()">
+                    <i class="fas fa-plus"></i> Añadir testimonio a la tienda
+                </button>
+                <div id="listaTestimoniosBuilder" style="margin-top:10px"></div>
+            </div>
+        </div>
+
+        <!-- ── PANEL 5: PERSONALIZACIÓN DE PRODUCTOS ── -->
+        <div class="ctrl-pane" id="pane-productos">
+            <div class="pane-title"><i class="fas fa-bag-shopping"></i> Presentación de productos</div>
+            <p class="pane-sub">Configura columnas, distribución, elementos visibles en cada tarjeta y estilo del botón de compra.</p>
+
+            <div class="ctrl-group">
+                <div class="ctrl-group-title">Distribución y columnas</div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Modo de distribución</label>
+                    <select class="ctrl-select" id="in-distribucionProductos" onchange="actualizarCampo('distribucionProductos', this.value)">
+                        <option value="cuadricula">Cuadrícula estándar</option>
+                        <option value="detallada">Lista horizontal detallada</option>
+                        <option value="compacta">Mosaico compacto</option>
+                    </select>
+                </div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Cantidad de columnas (Escritorio)</label>
+                    <select class="ctrl-select" id="in-columnasProductos" onchange="actualizarCampo('columnasProductos', parseInt(this.value, 10))">
+                        <option value="2">2 columnas (Tarjetas grandes)</option>
+                        <option value="3">3 columnas (Balanceado)</option>
+                        <option value="4">4 columnas (Catálogo denso)</option>
+                    </select>
+                </div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Ordenamiento predeterminado</label>
+                    <select class="ctrl-select" id="in-ordenPredeterminado" onchange="actualizarCampo('ordenPredeterminado', this.value)">
+                        <option value="reciente">Más recientes primero</option>
+                        <option value="precio_asc">Precio: menor a mayor</option>
+                        <option value="precio_desc">Precio: mayor a menor</option>
+                        <option value="nombre">Nombre A–Z</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="ctrl-group">
+                <div class="ctrl-group-title">Elementos visibles en tarjetas</div>
+                <label class="switch-row">
+                    <span>Mostrar precios</span>
+                    <input type="checkbox" id="in-mostrarPrecios" onchange="actualizarCampo('mostrarPrecios', this.checked)">
+                </label>
+                <label class="switch-row">
+                    <span>Mostrar insignia de descuentos (%)</span>
+                    <input type="checkbox" id="in-mostrarDescuentos" onchange="actualizarCampo('mostrarDescuentos', this.checked)">
+                </label>
+                <label class="switch-row">
+                    <span>Mostrar estrellas y calificaciones</span>
+                    <input type="checkbox" id="in-mostrarCalificaciones" onchange="actualizarCampo('mostrarCalificaciones', this.checked)">
+                </label>
+                <label class="switch-row">
+                    <span>Mostrar etiquetas de stock y categoría</span>
+                    <input type="checkbox" id="in-mostrarEtiquetas" onchange="actualizarCampo('mostrarEtiquetas', this.checked)">
+                </label>
+                <label class="switch-row">
+                    <span>Mostrar descripción corta del producto</span>
+                    <input type="checkbox" id="in-mostrarDescripcionProd" onchange="actualizarCampo('mostrarDescripcionProd', this.checked)">
+                </label>
+            </div>
+
+            <div class="ctrl-group">
+                <div class="ctrl-group-title">Botón de compra</div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Estilo visual del botón</label>
+                    <select class="ctrl-select" id="in-estiloBotonCompra" onchange="actualizarCampo('estiloBotonCompra', this.value)">
+                        <option value="solido">Sólido relleno</option>
+                        <option value="contorno">Contorno (Outline)</option>
+                        <option value="capsula">Cápsula redondeada</option>
+                        <option value="gradiente">Gradiente de marca</option>
+                    </select>
+                </div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Texto del botón</label>
+                    <input type="text" class="ctrl-input" id="in-textoBotonCompra" maxlength="60" oninput="actualizarCampo('textoBotonCompra', this.value)">
+                </div>
+            </div>
+        </div>
+
+        <!-- ── PANEL 6: REDES SOCIALES E INFORMACIÓN COMERCIAL ── -->
+        <div class="ctrl-pane" id="pane-comercial">
+            <div class="pane-title"><i class="fas fa-share-nodes"></i> Redes e info comercial</div>
+            <p class="pane-sub">Conecta tus canales de contacto directo, horarios de atención y políticas comerciales.</p>
+
+            <div class="ctrl-group">
+                <div class="ctrl-group-title">Redes sociales</div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label"><i class="fab fa-whatsapp"></i> WhatsApp (solo números)</label>
+                    <input type="text" class="ctrl-input" id="in-whatsapp" placeholder="Ej: 3001234567" oninput="actualizarCampo('whatsapp', this.value)">
+                </div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label"><i class="fab fa-instagram"></i> Instagram</label>
+                    <input type="text" class="ctrl-input" id="in-instagram" placeholder="Ej: @mitienda" oninput="actualizarCampo('instagram', this.value)">
+                </div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label"><i class="fab fa-facebook"></i> Facebook (usuario o URL)</label>
+                    <input type="text" class="ctrl-input" id="in-facebook" placeholder="Ej: mitienda.oficial" oninput="actualizarCampo('facebook', this.value)">
+                </div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label"><i class="fab fa-tiktok"></i> TikTok</label>
+                    <input type="text" class="ctrl-input" id="in-tiktok" placeholder="Ej: @mitienda" oninput="actualizarCampo('tiktok', this.value)">
+                </div>
+            </div>
+
+            <div class="ctrl-group">
+                <div class="ctrl-group-title">Contacto y horarios</div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Teléfono de atención</label>
+                    <input type="text" class="ctrl-input" id="in-telefonoContacto" placeholder="Ej: (601) 555-0199" oninput="actualizarCampo('telefonoContacto', this.value)">
+                </div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Correo electrónico comercial</label>
+                    <input type="email" class="ctrl-input" id="in-correoContacto" placeholder="contacto@mitienda.co" oninput="actualizarCampo('correoContacto', this.value)">
+                </div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Horario de atención</label>
+                    <input type="text" class="ctrl-input" id="in-horarioAtencion" placeholder="Lunes a Sábado 8:00 a.m. - 6:00 p.m." oninput="actualizarCampo('horarioAtencion', this.value)">
+                </div>
+            </div>
+
+            <div class="ctrl-group">
+                <div class="ctrl-group-title">Historia y políticas de la tienda</div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Sobre nuestra tienda / Descripción comercial</label>
+                    <textarea class="ctrl-textarea" id="in-historiaTienda" oninput="actualizarCampo('historiaTienda', this.value)"></textarea>
+                </div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Política de envíos</label>
+                    <textarea class="ctrl-textarea" id="in-politicaEnvios" oninput="actualizarCampo('politicaEnvios', this.value)"></textarea>
+                </div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Política de cambios y devoluciones</label>
+                    <textarea class="ctrl-textarea" id="in-politicaDevoluciones" oninput="actualizarCampo('politicaDevoluciones', this.value)"></textarea>
+                </div>
+            </div>
+        </div>
+
+    </aside>
+
+    <!-- 3. Lienzo Derecho: Vista Previa en Tiempo Real -->
+    <main class="builder-canvas-wrap">
+        <div class="preview-viewport" id="previewViewport">
+            <!-- Se renderiza dinámicamente en tiempo real desde estadoActual -->
+        </div>
+    </main>
+
+</div>
+
+<div class="toast-builder" id="toastBuilder">
+    <i class="fas fa-circle-check" style="color:var(--b-gold)"></i>
+    <span id="toastBuilderMsg">Cambios guardados</span>
+</div>
+
+<script th:inline="javascript">
+const CSRF_TOKEN  = document.querySelector('meta[name="_csrf"]')?.content;
+const CSRF_HEADER = document.querySelector('meta[name="_csrf_header"]')?.content || 'X-CSRF-TOKEN';
+
+const URL_BORRADOR  = /*[[@{/emprendedor/constructor/borrador}]]*/ '/emprendedor/constructor/borrador';
+const URL_PUBLICAR  = /*[[@{/emprendedor/constructor/publicar}]]*/ '/emprendedor/constructor/publicar';
+const URL_RESTAURAR = /*[[@{/emprendedor/constructor/restaurar}]]*/ '/emprendedor/constructor/restaurar';
+const URL_IMAGEN    = /*[[@{/emprendedor/constructor/imagen}]]*/ '/emprendedor/constructor/imagen';
+
+const RAW_ACTIVA    = /*[[${configActivaJson}]]*/ '{}';
+const RAW_PUBLICADA = /*[[${configPublicadaJson}]]*/ '{}';
+const RAW_DEFAULT   = /*[[${configDefaultJson}]]*/ '{}';
+
+/* Productos reales de la tienda para renderizar en la vista previa */
+const PRODUCTOS_TIENDA = [
+    /*[# th:each="p : ${productosTienda}"]*/
+    {
+        id: /*[[${p.id}]]*/ 1,
+        nombre: /*[[${p.nombre}]]*/ 'Producto',
+        descripcion: /*[[${p.descripcion}]]*/ '',
+        precio: /*[[${p.precio}]]*/ 50000,
+        precioActual: /*[[${p.precioActual}]]*/ 50000,
+        tieneOferta: /*[[${p.tieneOferta}]]*/ false,
+        descuento: /*[[${p.descuento}]]*/ 0,
+        stock: /*[[${p.stock}]]*/ 5,
+        destacado: /*[[${p.destacado}]]*/ false,
+        imagen: /*[[${p.rutaImagen}]]*/ null
+    },
+    /*[/]*/
+];
+
+const PRODUCTOS_DEMO = PRODUCTOS_TIENDA.length > 0 ? PRODUCTOS_TIENDA : [
+    { id: 1, nombre: 'Producto Estrella de Muestra', descripcion: 'Diseño artesanal colombiano con acabados premium.', precio: 120000, precioActual: 96000, tieneOferta: true, descuento: 20, stock: 12, destacado: true, imagen: null },
+    { id: 2, nombre: 'Edición Especial Caboré', descripcion: 'Elaborado con materiales seleccionados de alta durabilidad.', precio: 85000, precioActual: 85000, tieneOferta: false, descuento: 0, stock: 8, destacado: true, imagen: null },
+    { id: 3, nombre: 'Colección Nueva Temporada', descripcion: 'Pieza exclusiva disponible para envío inmediato.', precio: 64000, precioActual: 54400, tieneOferta: true, descuento: 15, stock: 15, destacado: false, imagen: null }
+];
+
+let estadoActual = JSON.parse(RAW_ACTIVA);
+let historialUndo = [];
+let cambiosSinGuardar = false;
+
+const PRESETS_PLANTILLA = {
+    moderna:     { colorPrimario:'#c9a84c', colorSecundario:'#e2603f', colorFondo:'#0d0d14', colorSuperficie:'#161625', colorTexto:'#f5f0e8', colorBotones:'#c9a84c', colorTextoBotones:'#0d0d14', colorEncabezado:'#12121f', fuenteTitulos:'Playfair Display', fuenteCuerpo:'DM Sans', estiloTarjeta:'elevada', radioBordes:'suave', nivelSombra:'media' },
+    minimalista: { colorPrimario:'#111111', colorSecundario:'#555555', colorFondo:'#fafafa', colorSuperficie:'#ffffff', colorTexto:'#111111', colorBotones:'#111111', colorTextoBotones:'#ffffff', colorEncabezado:'#ffffff', fuenteTitulos:'DM Sans', fuenteCuerpo:'DM Sans', estiloTarjeta:'minimal', radioBordes:'recto', nivelSombra:'ninguna' },
+    elegante:    { colorPrimario:'#b8923c', colorSecundario:'#8c6c28', colorFondo:'#f7f2e9', colorSuperficie:'#ffffff', colorTexto:'#2a2118', colorBotones:'#b8923c', colorTextoBotones:'#ffffff', colorEncabezado:'#efe6d3', fuenteTitulos:'Playfair Display', fuenteCuerpo:'DM Sans', estiloTarjeta:'clasica', radioBordes:'suave', nivelSombra:'suave' },
+    tecnologica: { colorPrimario:'#38bdf8', colorSecundario:'#6366f1', colorFondo:'#090d16', colorSuperficie:'#111827', colorTexto:'#f1f5f9', colorBotones:'#38bdf8', colorTextoBotones:'#090d16', colorEncabezado:'#0f172a', fuenteTitulos:'Outfit', fuenteCuerpo:'Plus Jakarta Sans', estiloTarjeta:'bordeada', radioBordes:'suave', nivelSombra:'intensa' },
+    colorida:    { colorPrimario:'#ec4899', colorSecundario:'#a855f7', colorFondo:'#150a1f', colorSuperficie:'#231433', colorTexto:'#fdf7ff', colorBotones:'#ec4899', colorTextoBotones:'#ffffff', colorEncabezado:'#1e0f2b', fuenteTitulos:'Playfair Display', fuenteCuerpo:'DM Sans', estiloTarjeta:'elevada', radioBordes:'redondeado', nivelSombra:'intensa' }
+};
+
+function abrirPanel(id, btn) {
+    document.querySelectorAll('.ctrl-pane').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.rail-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('pane-' + id)?.classList.add('active');
+    if (btn) btn.classList.add('active');
+}
+
+function cambiarDispositivo(modo, btn) {
+    document.querySelectorAll('.device-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    const vp = document.getElementById('previewViewport');
+    vp.classList.remove('device-tablet', 'device-mobile');
+    if (modo === 'tablet') vp.classList.add('device-tablet');
+    if (modo === 'mobile') vp.classList.add('device-mobile');
+}
+
+function registrarUndo() {
+    historialUndo.push(JSON.parse(JSON.stringify(estadoActual)));
+    if (historialUndo.length > 40) historialUndo.shift();
+    document.getElementById('btnDeshacer').disabled = false;
+    marcarEstadoCambios('dirty', 'Cambios sin guardar');
+}
+
+function deshacerCambio() {
+    if (historialUndo.length === 0) return;
+    estadoActual = historialUndo.pop();
+    document.getElementById('btnDeshacer').disabled = historialUndo.length === 0;
+    poblarControlesDesdeEstado();
+    renderizarVistaPrevia();
+    toast('Se deshizo el último cambio');
+}
+
+function marcarEstadoCambios(tipo, texto) {
+    const badge = document.getElementById('statusBadge');
+    const txt   = document.getElementById('statusText');
+    badge.classList.remove('dirty', 'draft');
+    if (tipo === 'dirty') { badge.classList.add('dirty'); cambiosSinGuardar = true; }
+    else if (tipo === 'draft') { badge.classList.add('draft'); cambiosSinGuardar = false; }
+    else { cambiosSinGuardar = false; }
+    txt.textContent = texto;
+}
+
+function actualizarCampo(campo, valor) {
+    registrarUndo();
+    estadoActual[campo] = valor;
+    renderizarVistaPrevia();
+}
+
+function aplicarPlantillaPreset(tpl) {
+    registrarUndo();
+    estadoActual.plantilla = tpl;
+    const preset = PRESETS_PLANTILLA[tpl] || PRESETS_PLANTILLA.moderna;
+    Object.assign(estadoActual, preset);
+    poblarControlesDesdeEstado();
+    renderizarVistaPrevia();
+    toast('Plantilla «' + tpl + '» aplicada en la vista previa');
+}
+
+function poblarControlesDesdeEstado() {
+    const camposTexto = [
+        'nombre','eslogan','descripcion','ciudad',
+        'colorPrimario','colorSecundario','colorFondo','colorSuperficie',
+        'colorTexto','colorEncabezado','colorBotones','colorTextoBotones',
+        'fuenteTitulos','fuenteCuerpo','tamanoTexto',
+        'estiloTarjeta','radioBordes','nivelSombra','espaciado','estiloEncabezado','estiloPie',
+        'portadaDiseno','portadaAlineacion','portadaSubtitulo','portadaTitulo','portadaDescripcion',
+        'portadaBotonTexto','portadaBotonUrl','portadaBoton2Texto','portadaBoton2Url',
+        'distribucionProductos','columnasProductos','ordenPredeterminado',
+        'estiloBotonCompra','textoBotonCompra',
+        'whatsapp','instagram','facebook','tiktok',
+        'telefonoContacto','correoContacto','horarioAtencion',
+        'historiaTienda','politicaEnvios','politicaDevoluciones'
+    ];
+    camposTexto.forEach(c => {
+        const el = document.getElementById('in-' + c);
+        if (el && estadoActual[c] !== undefined && estadoActual[c] !== null) {
+            el.value = estadoActual[c];
+        }
+    });
+
+    const ov = document.getElementById('in-portadaOverlay');
+    if (ov) {
+        ov.value = estadoActual.portadaOverlay ?? 40;
+        document.getElementById('lbl-overlay').textContent = ov.value + '%';
+    }
+
+    ['mostrarPrecios','mostrarDescuentos','mostrarCalificaciones','mostrarEtiquetas','mostrarDescripcionProd'].forEach(c => {
+        const chk = document.getElementById('in-' + c);
+        if (chk) chk.checked = Boolean(estadoActual[c]);
+    });
+
+    document.querySelectorAll('.tpl-card').forEach(card => {
+        card.classList.toggle('active', card.dataset.tpl === estadoActual.plantilla);
+    });
+
+    renderizarControlesSecciones();
+    renderizarThumbsGaleria();
+    renderizarListaTestimonios();
+}
+
+function renderizarControlesSecciones() {
+    const cont = document.getElementById('listaSeccionesBuilder');
+    if (!cont) return;
+    if (!Array.isArray(estadoActual.secciones)) estadoActual.secciones = [];
+
+    cont.innerHTML = estadoActual.secciones.map((s, idx) => `
+        <div class="sec-builder-item" id="sec-item-${idx}">
+            <div class="sec-builder-top">
+                <label class="sec-builder-name">
+                    <input type="checkbox" ${s.visible ? 'checked' : ''}
+                           onchange="alternarSeccion(${idx}, this.checked)">
+                    <span>${esc(s.nombre || s.id)}</span>
+                </label>
+                <div class="sec-order-btns">
+                    <button type="button" class="sec-mini-btn" onclick="moverSeccion(${idx}, -1)" title="Subir">↑</button>
+                    <button type="button" class="sec-mini-btn" onclick="moverSeccion(${idx}, 1)" title="Bajar">↓</button>
+                    <button type="button" class="sec-mini-btn" onclick="document.getElementById('sec-item-${idx}').classList.toggle('expanded')" title="Editar título">✏️</button>
+                </div>
+            </div>
+            <div class="sec-builder-edit">
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Título de la sección</label>
+                    <input type="text" class="ctrl-input" value="${escAttr(s.titulo || '')}"
+                           oninput="editarTextoSeccion(${idx}, 'titulo', this.value)">
+                </div>
+                <div class="ctrl-field">
+                    <label class="ctrl-label">Subtítulo</label>
+                    <input type="text" class="ctrl-input" value="${escAttr(s.subtitulo || '')}"
+                           oninput="editarTextoSeccion(${idx}, 'subtitulo', this.value)">
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function alternarSeccion(idx, visible) {
+    registrarUndo();
+    estadoActual.secciones[idx].visible = visible;
+    renderizarVistaPrevia();
+}
+
+function moverSeccion(idx, delta) {
+    const nuevoIdx = idx + delta;
+    if (nuevoIdx < 0 || nuevoIdx >= estadoActual.secciones.length) return;
+    registrarUndo();
+    const arr = estadoActual.secciones;
+    const temp = arr[idx];
+    arr[idx] = arr[nuevoIdx];
+    arr[nuevoIdx] = temp;
+    renderizarControlesSecciones();
+    renderizarVistaPrevia();
+}
+
+function editarTextoSeccion(idx, campo, valor) {
+    registrarUndo();
+    estadoActual.secciones[idx][campo] = valor;
+    renderizarVistaPrevia();
+}
+
+function renderizarThumbsGaleria() {
+    const cont = document.getElementById('galeriaThumbsBuilder');
+    if (!cont) return;
+    const lista = Array.isArray(estadoActual.galeria) ? estadoActual.galeria : [];
+    if (lista.length === 0) {
+        cont.innerHTML = '<span style="font-size:11.5px;color:var(--b-muted)">Sin imágenes adicionales en la galería.</span>';
+        return;
+    }
+    cont.innerHTML = lista.map((g, i) => {
+        const src = g.startsWith('/') || g.startsWith('http') ? g : ('/' + g);
+        return `
+            <div style="position:relative;width:62px;height:62px;border-radius:8px;overflow:hidden;border:1px solid var(--b-border)">
+                <img src="${escAttr(src)}" style="width:100%;height:100%;object-fit:cover">
+                <button type="button" onclick="quitarImagenGaleria(${i})"
+                        style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.75);color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:10px;cursor:pointer">✕</button>
+            </div>
+        `;
+    }).join('');
+}
+
+function quitarImagenGaleria(idx) {
+    registrarUndo();
+    estadoActual.galeria.splice(idx, 1);
+    renderizarThumbsGaleria();
+    renderizarVistaPrevia();
+}
+
+function agregarTestimonioManual() {
+    const autor = (document.getElementById('testimonioAutorInput')?.value || '').trim() || 'Cliente verificado';
+    const comentario = (document.getElementById('testimonioTextoInput')?.value || '').trim();
+    if (!comentario) {
+        toast('Escribe el comentario del testimonio.');
+        return;
+    }
+    registrarUndo();
+    if (!Array.isArray(estadoActual.testimonios)) estadoActual.testimonios = [];
+    estadoActual.testimonios.push({ autor, comentario, calificacion: 5 });
+    document.getElementById('testimonioAutorInput').value = '';
+    document.getElementById('testimonioTextoInput').value = '';
+    renderizarListaTestimonios();
+    renderizarVistaPrevia();
+}
+
+function quitarTestimonioManual(idx) {
+    registrarUndo();
+    estadoActual.testimonios.splice(idx, 1);
+    renderizarListaTestimonios();
+    renderizarVistaPrevia();
+}
+
+function renderizarListaTestimonios() {
+    const cont = document.getElementById('listaTestimoniosBuilder');
+    if (!cont) return;
+    const lista = Array.isArray(estadoActual.testimonios) ? estadoActual.testimonios : [];
+    cont.innerHTML = lista.map((t, i) => `
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 8px;background:var(--b-bg);border:1px solid var(--b-border);border-radius:8px;margin-bottom:6px;font-size:11.5px">
+            <div style="min-width:0;flex:1">
+                <strong>${esc(t.autor)}</strong>: ${esc(t.comentario)}
+            </div>
+            <button type="button" class="sec-mini-btn" onclick="quitarTestimonioManual(${i})">✕</button>
+        </div>
+    `).join('');
+}
+
+/* ── Subida de imágenes al servidor ── */
+async function subirArchivoConstructor(tipo, input) {
+    if (!input.files || !input.files[0]) return;
+    const fd = new FormData();
+    fd.append('tipo', tipo);
+    fd.append('archivo', input.files[0]);
+
+    try {
+        const res = await fetch(URL_IMAGEN, {
+            method: 'POST',
+            headers: { [CSRF_HEADER]: CSRF_TOKEN },
+            body: fd
+        });
+        const data = await res.json();
+        if (data.ok) {
+            registrarUndo();
+            if (tipo === 'logo') estadoActual.logo = data.ruta;
+            else if (tipo === 'favicon') estadoActual.favicon = data.ruta;
+            else if (tipo === 'banner') estadoActual.banner = data.ruta;
+            else if (tipo === 'galeria') {
+                if (!Array.isArray(estadoActual.galeria)) estadoActual.galeria = [];
+                estadoActual.galeria.push(data.ruta);
+                renderizarThumbsGaleria();
+            }
+            renderizarVistaPrevia();
+            toast('Imagen subida correctamente');
+        } else {
+            toast(data.error || 'No se pudo subir la imagen');
+        }
+    } catch (e) {
+        toast('Error de conexión al subir la imagen');
+    }
+}
+
+/* ── Guardar Borrador, Publicar y Restaurar en MariaDB ── */
+async function guardarBorrador() {
+    try {
+        const res = await fetch(URL_BORRADOR, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', [CSRF_HEADER]: CSRF_TOKEN },
+            body: JSON.stringify(estadoActual)
+        });
+        const data = await res.json();
+        if (data.ok) {
+            marcarEstadoCambios('draft', 'Borrador guardado');
+            toast('📝 ' + (data.mensaje || 'Borrador guardado en MariaDB'));
+        } else {
+            toast(data.error || 'Error al guardar borrador');
+        }
+    } catch (e) {
+        toast('Error de conexión al guardar borrador');
+    }
+}
+
+async function publicarCambios() {
+    try {
+        const res = await fetch(URL_PUBLICAR, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', [CSRF_HEADER]: CSRF_TOKEN },
+            body: JSON.stringify(estadoActual)
+        });
+        const data = await res.json();
+        if (data.ok) {
+            if (data.config) estadoActual = data.config;
+            marcarEstadoCambios('clean', 'Publicado al día');
+            toast('🚀 ' + (data.mensaje || 'Cambios publicados en tu tienda'));
+        } else {
+            toast(data.error || 'Error al publicar cambios');
+        }
+    } catch (e) {
+        toast('Error de conexión al publicar cambios');
+    }
+}
+
+async function restaurarPredeterminados() {
+    if (!confirm('¿Restaurar los colores, tipografías y secciones a los valores predeterminados?')) return;
+    try {
+        const res = await fetch(URL_RESTAURAR, {
+            method: 'POST',
+            headers: { [CSRF_HEADER]: CSRF_TOKEN }
+        });
+        const data = await res.json();
+        if (data.ok && data.config) {
+            registrarUndo();
+            estadoActual = data.config;
+            poblarControlesDesdeEstado();
+            renderizarVistaPrevia();
+            marcarEstadoCambios('clean', 'Valores restaurados');
+            toast('↺ Valores predeterminados restaurados');
+        }
+    } catch (e) {
+        toast('Error de conexión al restaurar');
+    }
+}
+
+/* ── Motor de Renderizado de Vista Previa en Tiempo Real ── */
+function renderizarVistaPrevia() {
+    const vp = document.getElementById('previewViewport');
+    if (!vp) return;
+    const c = estadoActual;
+
+    const radioMap = { recto: '4px', suave: '14px', redondeado: '22px', capsula: '30px' };
+    const sombraMap = {
+        ninguna: 'none',
+        suave: '0 4px 14px rgba(0,0,0,0.08)',
+        media: '0 10px 28px rgba(0,0,0,0.14)',
+        intensa: '0 20px 48px rgba(0,0,0,0.28)'
+    };
+    const tamMap = { compacto: '14.5px', normal: '16px', grande: '17.5px' };
+    const gapMap = { compacto: '12px', normal: '18px', amplio: '26px' };
+
+    vp.style.setProperty('--p-brand', c.colorPrimario || '#c9a84c');
+    vp.style.setProperty('--p-sec', c.colorSecundario || '#e2603f');
+    vp.style.setProperty('--p-bg', c.colorFondo || '#0d0d14');
+    vp.style.setProperty('--p-surface', c.colorSuperficie || '#161625');
+    vp.style.setProperty('--p-text', c.colorTexto || '#f5f0e8');
+    vp.style.setProperty('--p-header-bg', c.colorEncabezado || c.colorSuperficie || '#12121f');
+    vp.style.setProperty('--p-btn-bg', c.colorBotones || c.colorPrimario || '#c9a84c');
+    vp.style.setProperty('--p-btn-text', c.colorTextoBotones || '#0d0d14');
+    vp.style.setProperty('--p-font-head', `'${c.fuenteTitulos || 'Playfair Display'}', serif`);
+    vp.style.setProperty('--p-font-body', `'${c.fuenteCuerpo || 'DM Sans'}', sans-serif`);
+    vp.style.setProperty('--p-base-size', tamMap[c.tamanoTexto] || '16px');
+    vp.style.setProperty('--p-radius', radioMap[c.radioBordes] || '14px');
+    vp.style.setProperty('--p-shadow', sombraMap[c.nivelSombra] || sombraMap.media);
+    vp.style.setProperty('--p-gap', gapMap[c.espaciado] || '18px');
+    vp.style.setProperty('--p-cols', c.columnasProductos || 3);
+    vp.style.setProperty('--p-overlay', ((c.portadaOverlay ?? 40) / 100).toFixed(2));
+
+    const logoUrl = rutaPublicaJs(c.logo);
+    const bannerUrl = rutaPublicaJs(c.banner);
+    const alignStyle = c.portadaAlineacion === 'centro'
+        ? 'text-align:center'
+        : (c.portadaAlineacion === 'derecha' ? 'text-align:right' : 'text-align:left');
+
+    const tarjetasHtml = PRODUCTOS_DEMO.map(p => renderTarjetaPreview(p, c)).join('');
+
+    const seccionesActivas = (Array.isArray(c.secciones) ? c.secciones : []).filter(s => s.visible);
+    const bloquesHtml = seccionesActivas.map(s => {
+        if (['destacados','ofertas','mas_vendidos','nuevos','catalogo'].includes(s.id)) {
+            return `
+                <section class="pv-sec">
+                    <div class="pv-sec-head">
+                        <h3>${esc(s.titulo || s.nombre)}</h3>
+                        ${s.subtitulo ? `<p>${esc(s.subtitulo)}</p>` : ''}
+                    </div>
+                    <div class="pv-grid">${tarjetasHtml}</div>
+                </section>
+            `;
+        }
+        if (s.id === 'categorias') {
+            return `
+                <section class="pv-sec">
+                    <div class="pv-sec-head">
+                        <h3>${esc(s.titulo || 'Categorías')}</h3>
+                        ${s.subtitulo ? `<p>${esc(s.subtitulo)}</p>` : ''}
+                    </div>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap">
+                        <span style="padding:10px 16px;border-radius:var(--p-radius);background:var(--p-surface);border:1px solid rgba(128,128,128,.25);font-weight:600">✨ Destacados</span>
+                        <span style="padding:10px 16px;border-radius:var(--p-radius);background:var(--p-surface);border:1px solid rgba(128,128,128,.25);font-weight:600">🏷️ Ofertas</span>
+                        <span style="padding:10px 16px;border-radius:var(--p-radius);background:var(--p-surface);border:1px solid rgba(128,128,128,.25);font-weight:600">🆕 Novedades</span>
+                    </div>
+                </section>
+            `;
+        }
+        if (s.id === 'historia') {
+            return `
+                <section class="pv-sec">
+                    <div class="pv-sec-head">
+                        <h3>${esc(s.titulo || 'Sobre nuestra tienda')}</h3>
+                        ${s.subtitulo ? `<p>${esc(s.subtitulo)}</p>` : ''}
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+                        <div style="padding:18px;border-radius:var(--p-radius);background:var(--p-surface);border:1px solid rgba(128,128,128,.22)">
+                            <strong style="color:var(--p-brand);display:block;margin-bottom:6px">📖 Nuestra historia</strong>
+                            <p style="font-size:.86rem;line-height:1.55">${esc(c.historiaTienda || c.descripcion || '')}</p>
+                        </div>
+                        <div style="padding:18px;border-radius:var(--p-radius);background:var(--p-surface);border:1px solid rgba(128,128,128,.22)">
+                            <strong style="color:var(--p-brand);display:block;margin-bottom:6px">🚚 Envíos y devoluciones</strong>
+                            <p style="font-size:.84rem;line-height:1.5">${esc(c.politicaEnvios || '')}</p>
+                            <p style="font-size:.84rem;line-height:1.5;margin-top:6px">${esc(c.politicaDevoluciones || '')}</p>
+                        </div>
+                    </div>
+                </section>
+            `;
+        }
+        if (s.id === 'galeria') {
+            const imgs = Array.isArray(c.galeria) ? c.galeria : [];
+            if (imgs.length === 0) return '';
+            return `
+                <section class="pv-sec">
+                    <div class="pv-sec-head">
+                        <h3>${esc(s.titulo || 'Galería')}</h3>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px">
+                        ${imgs.map(g => `<img src="${escAttr(rutaPublicaJs(g))}" style="width:100%;height:140px;object-fit:cover;border-radius:var(--p-radius)">`).join('')}
+                    </div>
+                </section>
+            `;
+        }
+        if (s.id === 'testimonios') {
+            const tests = Array.isArray(c.testimonios) && c.testimonios.length > 0
+                ? c.testimonios
+                : [{ autor: 'Cliente verificado', comentario: 'Excelente atención y productos de gran calidad.', calificacion: 5 }];
+            return `
+                <section class="pv-sec">
+                    <div class="pv-sec-head">
+                        <h3>${esc(s.titulo || 'Testimonios')}</h3>
+                        ${s.subtitulo ? `<p>${esc(s.subtitulo)}</p>` : ''}
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px">
+                        ${tests.map(t => `
+                            <div style="padding:16px;border-radius:var(--p-radius);background:var(--p-surface);border:1px solid rgba(128,128,128,.22)">
+                                <div style="color:#eab308;font-size:12px;margin-bottom:6px">★★★★★</div>
+                                <p style="font-size:.86rem;font-style:italic;margin-bottom:8px">“${esc(t.comentario)}”</p>
+                                <strong style="font-size:.78rem;color:var(--p-brand)">${esc(t.autor)}</strong>
+                            </div>
+                        `).join('')}
+                    </div>
+                </section>
+            `;
+        }
+        if (s.id === 'contacto') {
+            return `
+                <section class="pv-sec">
+                    <div class="pv-sec-head">
+                        <h3>${esc(s.titulo || 'Contacto')}</h3>
+                        ${s.subtitulo ? `<p>${esc(s.subtitulo)}</p>` : ''}
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px">
+                        <div style="padding:16px;border-radius:var(--p-radius);background:var(--p-surface);border:1px solid rgba(128,128,128,.22);font-size:.85rem">
+                            <strong style="color:var(--p-brand);display:block;margin-bottom:6px">📍 Ubicación y horario</strong>
+                            <div>${esc(c.ciudad || 'Colombia')}</div>
+                            <div style="opacity:.75;margin-top:4px">${esc(c.horarioAtencion || '')}</div>
+                        </div>
+                        <div style="padding:16px;border-radius:var(--p-radius);background:var(--p-surface);border:1px solid rgba(128,128,128,.22);font-size:.85rem">
+                            <strong style="color:var(--p-brand);display:block;margin-bottom:6px">📞 Canales directos</strong>
+                            ${c.whatsapp ? `<div>WhatsApp: ${esc(c.whatsapp)}</div>` : ''}
+                            ${c.instagram ? `<div>Instagram: ${esc(c.instagram)}</div>` : ''}
+                            ${c.telefonoContacto ? `<div>Tel: ${esc(c.telefonoContacto)}</div>` : ''}
+                            ${c.correoContacto ? `<div>Email: ${esc(c.correoContacto)}</div>` : ''}
+                        </div>
+                    </div>
+                </section>
+            `;
+        }
+        return '';
+    }).join('');
+
+    vp.innerHTML = `
+        <header class="pv-header">
+            <div class="pv-brand-row ${c.estiloEncabezado === 'centrado' ? 'centrado' : ''}">
+                ${logoUrl ? `<img src="${escAttr(logoUrl)}" class="pv-logo" alt="Logo">` : `<div class="pv-logo">🏪</div>`}
+                <div>
+                    ${c.eslogan ? `<div class="pv-eslogan">${esc(c.eslogan)}</div>` : ''}
+                    <div class="pv-title">${esc(c.nombre || 'Mi tienda')}</div>
+                    <div class="pv-desc">${esc(c.descripcion || '')}</div>
+                </div>
+            </div>
+
+            <div class="pv-hero">
+                ${bannerUrl && c.portadaDiseno === 'impacto' ? `<img src="${escAttr(bannerUrl)}" class="pv-hero-bg"><div class="pv-hero-overlay"></div>` : ''}
+                <div class="pv-hero-inner" style="${alignStyle};${bannerUrl && c.portadaDiseno === 'impacto' ? 'color:#fff' : ''}">
+                    ${c.portadaSubtitulo ? `<div class="pv-hero-sub">${esc(c.portadaSubtitulo)}</div>` : ''}
+                    <div class="pv-hero-title">${esc(c.portadaTitulo || c.nombre || 'Bienvenido')}</div>
+                    ${c.portadaDescripcion ? `<div class="pv-hero-text" style="${c.portadaAlineacion === 'centro' ? 'margin-left:auto;margin-right:auto' : ''}">${esc(c.portadaDescripcion)}</div>` : ''}
+                    <div style="display:inline-flex;gap:10px;flex-wrap:wrap">
+                        ${c.portadaBotonTexto ? `<span class="pv-btn-cta">${esc(c.portadaBotonTexto)} →</span>` : ''}
+                        ${c.portadaBoton2Texto ? `<span class="pv-btn-cta" style="background:transparent;border:1.5px solid currentColor;color:inherit">${esc(c.portadaBoton2Texto)}</span>` : ''}
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="pv-main">
+            ${bloquesHtml}
+        </div>
+
+        <footer class="pv-footer">
+            <div>
+                <strong>${esc(c.nombre || 'Mi tienda')}</strong>
+                ${c.estiloPie !== 'minimalista' && c.eslogan ? `<span style="opacity:.7;margin-left:8px">· ${esc(c.eslogan)}</span>` : ''}
+            </div>
+            <div style="opacity:.7">© 2026 · Caboré Marketplace</div>
+        </footer>
+    `;
+}
+
+function renderTarjetaPreview(p, c) {
+    const precioFmt = '$' + Number(p.precioActual || p.precio || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 });
+    const precioOldFmt = '$' + Number(p.precio || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 });
+    return `
+        <div class="pv-card tarjeta-${escAttr(c.estiloTarjeta || 'elevada')}">
+            <div class="pv-card-img">
+                ${p.imagen ? `<img src="${escAttr(p.imagen)}" alt="">` : '🛍️'}
+                ${c.mostrarDescuentos && p.tieneOferta ? `<span class="pv-badge-oferta">-${p.descuento}%</span>` : ''}
+            </div>
+            <div class="pv-card-body">
+                <div class="pv-card-title">${esc(p.nombre)}</div>
+                ${c.mostrarDescripcionProd && p.descripcion ? `<div class="pv-card-desc">${esc(p.descripcion)}</div>` : ''}
+                ${c.mostrarCalificaciones ? `<div style="color:#eab308;font-size:11.5px">★★★★★ <span style="opacity:.65">(5.0)</span></div>` : ''}
+                ${c.mostrarPrecios ? `
+                    <div style="display:flex;align-items:baseline;gap:8px;margin-top:auto">
+                        <span class="pv-card-price">${precioFmt}</span>
+                        ${c.mostrarDescuentos && p.tieneOferta ? `<span style="font-size:.78rem;text-decoration:line-through;opacity:.6">${precioOldFmt}</span>` : ''}
+                    </div>
+                ` : ''}
+                ${c.mostrarEtiquetas ? `<div style="font-size:.72rem;color:#10b981;font-weight:600">Stock: ${p.stock}</div>` : ''}
+            </div>
+            <div class="pv-card-btn ${escAttr(c.estiloBotonCompra || 'solido')}">
+                <i class="fas fa-bag-shopping"></i> ${esc(c.textoBotonCompra || 'Agregar al carrito')}
+            </div>
+        </div>
+    `;
+}
+
+function rutaPublicaJs(ruta) {
+    if (!ruta) return null;
+    if (ruta.startsWith('/') || ruta.startsWith('http://') || ruta.startsWith('https://')) return ruta;
+    return '/' + ruta;
+}
+
+function esc(str) {
+    const d = document.createElement('div');
+    d.textContent = str == null ? '' : String(str);
+    return d.innerHTML;
+}
+
+function escAttr(str) {
+    return String(str == null ? '' : str)
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+function toast(msg) {
+    const t = document.getElementById('toastBuilder');
+    document.getElementById('toastBuilderMsg').textContent = msg;
+    t.classList.add('show');
+    clearTimeout(window.__builderToastTimer);
+    window.__builderToastTimer = setTimeout(() => t.classList.remove('show'), 3200);
+}
+
+window.addEventListener('beforeunload', e => {
+    if (cambiosSinGuardar) {
+        e.preventDefault();
+        e.returnValue = '';
+    }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    poblarControlesDesdeEstado();
+    renderizarVistaPrevia();
+});
+</script>
+</body>
+</html>

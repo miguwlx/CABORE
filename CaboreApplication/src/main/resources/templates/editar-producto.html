@@ -3,50 +3,108 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Editar producto - Caboré</title>
+    <title>Editar producto — Caboré</title>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" th:href="@{/CSS/editar_producto.css}">
     <style>
-        .aviso-error { padding: 12px 16px; border-radius: 10px; margin-bottom: 18px; font-size: 14px;
-                       background: rgba(239,68,68,0.10); border: 1px solid rgba(239,68,68,0.30); color: #b42318; }
+        .aviso-error {
+            padding: 12px 16px; border-radius: 10px; margin-bottom: 18px; font-size: 14px;
+            background: rgba(239,68,68,0.10); border: 1px solid rgba(239,68,68,0.30); color: #b42318;
+        }
+        .aviso-rechazo {
+            padding: 12px 16px; border-radius: 10px; margin-bottom: 18px; font-size: 13px;
+            background: rgba(220,38,38,0.08); border: 1px solid rgba(220,38,38,0.25); color: #b91c1c;
+        }
+        .form-row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+        .check-group { display: flex; gap: 18px; flex-wrap: wrap; margin: 14px 0; }
+        .check-group label { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; text-transform: none; font-size: 14px; }
+        .current-img { max-height: 120px; border-radius: 10px; margin-top: 8px; display: block; }
     </style>
 </head>
 <body>
-    <div class="bg-grid"></div>
+<div class="bg-grid"></div>
 
-    <div class="box">
-        <span class="logo">Cabo<span>ré</span></span>
-        <h2>Editar producto</h2>
-        <p class="subtitle">Los cambios se ven de inmediato en tu tienda.</p>
+<div class="box" style="max-width:560px">
+    <a class="logo" th:href="@{/emprendedor(tab='productos')}" style="text-decoration:none">Cabo<span>ré</span></a>
+    <h2>Editar producto ✏️</h2>
+    <p class="subtitle">Actualiza la información del producto</p>
 
-        <div class="aviso-error" th:if="${error}" th:text="${error}"></div>
+    <div class="aviso-error" th:if="${error}" th:text="${error}"></div>
 
-        <form th:action="@{/emprendedor/productos/{id}(id=${producto.id})}" method="post">
+    <div class="aviso-rechazo"
+         th:if="${producto.estadoVerificacion.name() == 'rechazado' and producto.motivoRechazo != null}">
+        <strong>⛔ Producto rechazado por moderación:</strong>
+        <span th:text="${producto.motivoRechazo}">Motivo</span>.
+        Al guardar los cambios volverá a estado <strong>pendiente</strong> para una nueva revisión.
+    </div>
+
+    <form th:action="@{/emprendedor/productos/{id}(id=${producto.id})}" method="post" enctype="multipart/form-data">
+        <input type="hidden" name="formCompleto" value="1">
+
+        <div class="form-group">
+            <label for="nombre">Nombre del producto *</label>
+            <input type="text" id="nombre" name="nombre" th:value="${producto.nombre}"
+                   required minlength="2" maxlength="200">
+        </div>
+
+        <div class="form-group" th:if="${categorias != null}">
+            <label for="categoria_id">Categoría</label>
+            <select id="categoria_id" name="categoria_id"
+                    style="width:100%;padding:12px 14px;border-radius:10px;border:1px solid rgba(28,24,16,0.12);font-family:inherit;font-size:14px">
+                <option th:each="c : ${categorias}"
+                        th:value="${c.id}"
+                        th:selected="${producto.categoriaId != null ? producto.categoriaId == c.id : c.id == 12}"
+                        th:text="${c.iconoSeguro + ' ' + c.nombre}">Categoría</option>
+            </select>
+        </div>
+
+        <div class="form-row-2">
             <div class="form-group">
-                <label for="nombre">Nombre</label>
-                <input type="text" id="nombre" name="nombre" th:value="${producto.nombre}"
-                       required minlength="2" maxlength="150">
-            </div>
-            <div class="form-group">
-                <label for="descripcion">Descripción</label>
-                <textarea id="descripcion" name="descripcion" th:text="${producto.descripcion}"></textarea>
-            </div>
-            <div class="form-group">
-                <label for="precio">Precio (COP)</label>
+                <label for="precio">Precio (COP) *</label>
                 <input type="number" id="precio" name="precio" th:value="${producto.precio}"
                        required min="1" step="any">
             </div>
             <div class="form-group">
-                <label for="stock">Unidades disponibles</label>
-                <input type="number" id="stock" name="stock" th:value="${producto.stock}"
-                       required min="0" step="1">
+                <label for="precio_oferta">Precio de oferta (opcional)</label>
+                <input type="number" id="precio_oferta" name="precio_oferta" th:value="${producto.precioOferta}"
+                       min="0" step="any">
             </div>
+        </div>
 
-            <div class="btn-row">
-                <button type="submit" class="btn btn-gold">Guardar cambios</button>
-                <a class="btn btn-ghost" th:href="@{/emprendedor}">Cancelar</a>
-            </div>
-        </form>
-    </div>
+        <div class="form-group">
+            <label for="stock">Unidades disponibles *</label>
+            <input type="number" id="stock" name="stock" th:value="${producto.stock}"
+                   required min="0" step="1">
+        </div>
+
+        <div class="form-group">
+            <label for="descripcion">Descripción</label>
+            <textarea id="descripcion" name="descripcion" th:text="${producto.descripcion}"></textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="imagen">Imagen del producto (opcional)</label>
+            <input type="file" id="imagen" name="imagen" accept="image/*">
+            <img th:if="${producto.rutaImagen != null}" th:src="${producto.rutaImagen}"
+                 class="current-img" th:alt="${producto.nombre}">
+        </div>
+
+        <div class="check-group">
+            <label>
+                <input type="checkbox" name="destacado" value="true" th:checked="${producto.destacado}">
+                ⭐ Producto destacado
+            </label>
+            <label>
+                <input type="checkbox" name="activo" value="true" th:checked="${producto.activo}">
+                ✅ Producto activo
+            </label>
+        </div>
+
+        <div class="btn-row">
+            <button type="submit" class="btn btn-gold">💾 Guardar cambios</button>
+            <a class="btn btn-ghost" th:href="@{/emprendedor(tab='productos')}">← Cancelar</a>
+        </div>
+    </form>
+</div>
 </body>
 </html>

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirmar pedido — Caboré</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" th:href="@{/CSS/cliente.css}">
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-glow a"></div>
+<div class="bg-glow b"></div>
+
+<nav th:replace="~{fragments/cliente-nav :: navbar}"></nav>
+
+<main class="page">
+    <a class="back-link" th:href="@{/cliente/carrito}">← Volver al carrito</a>
+
+    <div class="section-header">
+        <h2><i class="fas fa-credit-card"></i> Confirmar pedido</h2>
+        <span th:text="${resumen.count()} + (${resumen.count() == 1 ? ' producto' : ' productos'})">0</span>
+    </div>
+
+    <div class="flash err" th:if="${error}"><i class="fas fa-exclamation-circle"></i> <span th:text="${error}"></span></div>
+
+    <div class="checkout-cols">
+        <!-- Datos de entrega -->
+        <form class="checkout-form" th:action="@{/cliente/checkout}" method="post">
+            <h3>Datos de entrega</h3>
+            <label for="direccion">Dirección de entrega <span class="req">*</span></label>
+            <textarea id="direccion" name="direccion" rows="2" required maxlength="255"
+                      placeholder="Calle, número, barrio, ciudad…" th:text="${direccionUsuario}"></textarea>
+
+            <label for="telefono">Teléfono de contacto</label>
+            <input id="telefono" name="telefono" type="tel" maxlength="30"
+                   pattern="[0-9+\-() ]{7,30}" placeholder="Ej: 313 000 0000" th:value="${telefonoUsuario}">
+
+            <label for="notas">Notas para la tienda (opcional)</label>
+            <textarea id="notas" name="notas" rows="2" maxlength="500"
+                      placeholder="Instrucciones de entrega, horarios, color elegido…"></textarea>
+
+            <label class="check-line">
+                <input type="checkbox" name="guardar_datos" value="1" checked>
+                Recordar estos datos en mi perfil
+            </label>
+
+            <div class="pay-box">
+                <h4><i class="fas fa-hand-holding-dollar"></i> Método de pago</h4>
+                <p><strong>Pago contra entrega.</strong> Al confirmar, tu pedido queda
+                    <strong>registrado como pendiente</strong> en Caboré y las tiendas te contactan
+                    para coordinar la entrega. El stock de los productos se reserva descontándolo
+                    del inventario real en este momento.</p>
+            </div>
+
+            <button class="btn-checkout full" type="submit">
+                <i class="fas fa-check-circle"></i> Realizar pedido —
+                <span th:text="'$' + ${#numbers.formatDecimal(resumen.total(), 1, 'POINT', 0, 'COMMA')}">$0</span>
+            </button>
+            <p class="legal-note">
+                <i class="fas fa-lock"></i> Al confirmar aceptas el precio y la disponibilidad mostrados.
+                Los precios mostrados provienen del catálogo oficial de cada tienda.
+            </p>
+        </form>
+
+        <!-- Resumen -->
+        <aside class="checkout-summary">
+            <h3>Tu pedido</h3>
+            <div class="chk-item" th:each="it : ${items}">
+                <div class="chk-item-info">
+                    <span class="chk-qty" th:text="${it.cantidad()} + '×'">1×</span>
+                    <div>
+                        <div class="chk-name" th:text="${it.nombre()}">Producto</div>
+                        <div class="chk-store" th:text="${it.tienda()}">Tienda</div>
+                    </div>
+                </div>
+                <span class="chk-sub" th:text="'$' + ${#numbers.formatDecimal(it.subtotal(), 1, 'POINT', 0, 'COMMA')}">$0</span>
+            </div>
+            <div class="cart-total-row big">
+                <span class="cart-total-label">Total a pagar</span>
+                <span class="cart-total-val" th:text="'$' + ${#numbers.formatDecimal(resumen.total(), 1, 'POINT', 0, 'COMMA')}">$0</span>
+            </div>
+        </aside>
+    </div>
+</main>
+</body>
+</html>

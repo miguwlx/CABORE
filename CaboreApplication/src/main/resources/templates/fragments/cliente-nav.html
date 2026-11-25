@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Barra superior compartida por las páginas del módulo cliente (fase 3) -->
+<nav class="navbar" th:fragment="navbar">
+    <a th:href="@{/cliente}" class="nav-logo">Caboré</a>
+    <form class="nav-search" method="get" th:action="@{/cliente}">
+        <i class="fas fa-search"></i>
+        <input type="text" name="q" placeholder="Buscar productos o tiendas…" autocomplete="off">
+    </form>
+    <div class="nav-actions">
+        <a class="nav-btn" th:href="@{/chat}" title="Mensajes">
+            <i class="far fa-comment-dots"></i>
+            <span class="cart-badge" th:if="${mensajesNoLeidosCount != null and mensajesNoLeidosCount > 0}"
+                  th:text="${mensajesNoLeidosCount}">0</span>
+        </a>
+        <a class="nav-btn" th:href="@{/cliente/favoritos}" title="Favoritos">
+            <i class="far fa-heart"></i>
+            <span class="cart-badge" th:if="${favoritosCount != null and favoritosCount > 0}"
+                  th:text="${favoritosCount}" style="background:#ff4d6d">0</span>
+        </a>
+        <a class="nav-btn" th:href="@{/cliente/carrito}" title="Carrito">
+            <i class="fas fa-shopping-bag"></i>
+            <span class="cart-badge" th:if="${carritoCount != null and carritoCount > 0}"
+                  th:text="${carritoCount}">0</span>
+        </a>
+        <div class="nav-user">
+            <div class="nav-avatar" th:text="${usuarioInicial} ?: 'C'">C</div>
+            <div class="nav-dropdown">
+                <a th:href="@{/cliente/perfil}"><i class="far fa-user"></i> <span th:text="${usuarioNombre} ?: 'Cliente'">Cliente</span></a>
+                <a th:href="@{/cliente/pedidos}"><i class="fas fa-box"></i> Mis pedidos</a>
+                <a th:href="@{/chat}" style="justify-content:space-between">
+                    <span><i class="far fa-comment-dots"></i> Mensajes</span>
+                    <span th:if="${mensajesNoLeidosCount != null and mensajesNoLeidosCount > 0}"
+                          th:text="${mensajesNoLeidosCount}"
+                          style="background:var(--accent);color:#fff;font-size:11px;font-weight:700;border-radius:20px;min-width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;padding:0 5px">0</span>
+                </a>
+                <a th:href="@{/cliente/favoritos}"><i class="far fa-heart"></i> Favoritos</a>
+                <a th:href="@{/cliente/carrito}"><i class="fas fa-shopping-bag"></i> Mi carrito</a>
+                <hr>
+                <form th:action="@{/logout}" method="post" class="nav-logout-form">
+                    <button type="submit" class="danger nav-logout"><i class="fas fa-sign-out-alt"></i> Cerrar sesión</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</nav>
+
+<th:block th:fragment="scripts">
+<script>
+function cbrToast(msg, tipo) {
+    let c = document.getElementById('toasts');
+    if (!c) { c = document.createElement('div'); c.id = 'toasts'; c.className = 'toast-container'; document.body.appendChild(c); }
+    const t = document.createElement('div');
+    t.className = 'toast ' + (tipo || '');
+    t.innerHTML = '<i class="fas ' + (tipo === 'ok' ? 'fa-check-circle' : 'fa-exclamation-circle') + '"></i> ' + msg;
+    c.appendChild(t);
+    setTimeout(() => t.remove(), 3200);
+}
+</script>
+</th:block>
+</body>
+</html>

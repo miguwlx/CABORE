@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis pedidos — Caboré</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" th:href="@{/CSS/cliente.css}">
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-glow a"></div>
+<div class="bg-glow b"></div>
+
+<nav th:replace="~{fragments/cliente-nav :: navbar}"></nav>
+
+<main class="page">
+    <div class="flash ok" th:if="${flashOk}"><i class="fas fa-check-circle"></i> <span th:text="${flashOk}"></span></div>
+    <div class="flash err" th:if="${flashErr}"><i class="fas fa-exclamation-circle"></i> <span th:text="${flashErr}"></span></div>
+
+    <div class="section-header">
+        <h2><i class="fas fa-box"></i> Mis pedidos</h2>
+        <span th:text="${#lists.size(pedidos)} + (${#lists.size(pedidos) == 1 ? ' pedido' : ' pedidos'})">0</span>
+    </div>
+
+    <!-- Resumen de compras del cliente -->
+    <div class="client-stats-grid" th:if="${resumenPedidos != null and resumenPedidos.total() > 0}">
+        <div class="client-stat-card">
+            <span class="client-stat-label">Total pedidos</span>
+            <strong class="client-stat-val" th:text="${resumenPedidos.total()}">0</strong>
+        </div>
+        <div class="client-stat-card">
+            <span class="client-stat-label">En curso</span>
+            <strong class="client-stat-val" style="color:var(--gold-dk)" th:text="${resumenPedidos.enCurso()}">0</strong>
+        </div>
+        <div class="client-stat-card">
+            <span class="client-stat-label">Entregados</span>
+            <strong class="client-stat-val" style="color:var(--green)" th:text="${resumenPedidos.entregados()}">0</strong>
+        </div>
+        <div class="client-stat-card">
+            <span class="client-stat-label">Total comprado</span>
+            <strong class="client-stat-val" th:text="'$' + ${#numbers.formatDecimal(resumenPedidos.totalInvertido(), 1, 'POINT', 0, 'COMMA')}">$0</strong>
+        </div>
+    </div>
+
+    <!-- Barra de búsqueda y filtro por estado -->
+    <form class="orders-filter-bar" method="get" th:action="@{/cliente/pedidos}"
+          th:if="${resumenPedidos != null and resumenPedidos.total() > 0}">
+        <div class="orders-status-tabs">
+            <a th:href="@{/cliente/pedidos(q=${qFiltro})}" class="status-pill" th:classappend="${#strings.isEmpty(estadoFiltro)} ? 'active'">Todos</a>
+            <a th:href="@{/cliente/pedidos(estado='pendiente', q=${qFiltro})}" class="status-pill" th:classappend="${estadoFiltro == 'pendiente'} ? 'active'">Pendientes</a>
+            <a th:href="@{/cliente/pedidos(estado='confirmado', q=${qFiltro})}" class="status-pill" th:classappend="${estadoFiltro == 'confirmado'} ? 'active'">Confirmados</a>
+            <a th:href="@{/cliente/pedidos(estado='enviado', q=${qFiltro})}" class="status-pill" th:classappend="${estadoFiltro == 'enviado'} ? 'active'">En camino</a>
+            <a th:href="@{/cliente/pedidos(estado='entregado', q=${qFiltro})}" class="status-pill" th:classappend="${estadoFiltro == 'entregado'} ? 'active'">Entregados</a>
+            <a th:href="@{/cliente/pedidos(estado='cancelado', q=${qFiltro})}" class="status-pill" th:classappend="${estadoFiltro == 'cancelado'} ? 'active'">Cancelados</a>
+        </div>
+        <div class="orders-search-row">
+            <input type="hidden" name="estado" th:if="${!#strings.isEmpty(estadoFiltro)}" th:value="${estadoFiltro}">
+            <input type="text" name="q" class="order-select" placeholder="Buscar por # de pedido, factura o producto…" th:value="${qFiltro}">
+            <button type="submit" class="price-apply">Buscar</button>
+            <a th:if="${!#strings.isEmpty(estadoFiltro) or !#strings.isEmpty(qFiltro)}"
+               th:href="@{/cliente/pedidos}" class="reset-filters" style="margin-top:0">✕ Limpiar</a>
+        </div>
+    </form>
+
+    <div class="empty" th:if="${#lists.isEmpty(pedidos)}">
+        <i class="fas fa-box-open"></i>
+        <h3>Aún no tienes pedidos</h3>
+        <p>Cuando compres, tus pedidos aparecerán aquí con su estado y su factura.</p>
+        <a class="price-apply browse-btn" th:href="@{/cliente}">Explorar productos</a>
+    </div>
+
+    <div class="orders-list" th:unless="${#lists.isEmpty(pedidos)}">
+        <div class="order-card" th:each="o : ${pedidos}">
+            <div class="order-head">
+                <span class="order-id" th:text="'Pedido #' + ${o.id}">Pedido #</span>
+                <span class="estado-badge"
+                      th:classappend="'estado-' + ${o.estado.name()}"
+                      th:text="${o.estado.etiqueta()}">estado</span>
+            </div>
+            <div class="order-meta">
+                <span><i class="far fa-calendar"></i> <span
+                      th:text="${#temporals.format(o.creadoEn, 'dd/MM/yyyy HH:mm')}">fecha</span></span>
+                <span><i class="fas fa-layer-group"></i> <span
+                      th:text="${#lists.size(o.items)} + (${#lists.size(o.items) == 1 ? ' producto' : ' productos'})"></span></span>
+                <span class="order-total" th:text="'$' + ${#numbers.formatDecimal(o.total, 1, 'POINT', 0, 'COMMA')}">$0</span>
+            </div>
+            <div class="order-items-preview">
+                <span th:each="i, s : ${o.items}">
+                    <a th:href="@{/cliente/producto/{id}(id=${i.producto.id})}" th:text="${i.producto.nombre}">prod</a><span
+                       th:unless="${s.last}"> · </span>
+                </span>
+            </div>
+            <div class="order-actions">
+                <a class="price-apply tiny" th:href="@{/cliente/pedido/{id}(id=${o.id})}"><i class="far fa-eye"></i> Ver detalle</a>
+                <a class="price-apply tiny ghost" th:href="@{/cliente/factura/{id}(id=${o.id})}"><i class="fas fa-file-invoice"></i> Factura</a>
+                <form th:action="@{/cliente/pedido/{id}/reordenar(id=${o.id})}" method="post" class="inline-form">
+                    <button type="submit" class="price-apply tiny ghost">
+                        <i class="fas fa-rotate-right"></i> Volver a comprar
+                    </button>
+                </form>
+                <form th:if="${o.estado.name() == 'pendiente'}"
+                      th:action="@{/cliente/pedido/{id}/cancelar(id=${o.id})}" method="post" class="inline-form">
+                    <button type="submit" class="link-danger" onclick="return confirm('¿Cancelar este pedido? El stock volverá a estar disponible.')">
+                        <i class="fas fa-ban"></i> Cancelar
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</main>
+</body>
+</html>

@@ -1,30 +1,1003 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
 <head>
     <meta charset="UTF-8">
-    <title th:text="${tienda.nombre} + ' - Caboré'">Tienda</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${cfg.nombre} + ' — Caboré'">Tienda</title>
+    <link rel="icon" th:if="${cfg.rutaFaviconPublica != null}" th:href="${cfg.rutaFaviconPublica}">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=DM+Sans:wght@300;400;500;600;700&family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Inter:wght@400;500;600;700&family=Outfit:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" th:href="@{/CSS/cliente.css}">
+    <style>
+        /* ── Las 5 plantillas profesionales + variables dinámicas del Constructor ── */
+        body.plantilla-moderna {
+            --t-bg: #0d0d14; --t-bg2: #12121f; --t-surface: #161625;
+            --t-text: #f5f0e8; --t-muted: rgba(245,240,232,0.62); --t-border: rgba(255,255,255,0.14);
+            --t-radius: 16px; --t-radius-lg: 22px; --t-font-head: 'Playfair Display', serif;
+            --t-hover-lift: translateY(-4px); --t-hover-shadow: 0 16px 40px rgba(0,0,0,0.35);
+        }
+        body.plantilla-minimalista {
+            --t-bg: #fafafa; --t-bg2: #f0f0f0; --t-surface: #ffffff;
+            --t-text: #111111; --t-muted: rgba(17,17,17,0.58); --t-border: rgba(0,0,0,0.10);
+            --t-radius: 4px; --t-radius-lg: 6px; --t-font-head: 'DM Sans', sans-serif;
+            --t-hover-lift: none; --t-hover-shadow: none;
+        }
+        body.plantilla-elegante {
+            --t-bg: #f7f2e9; --t-bg2: #efe6d3; --t-surface: #ffffff;
+            --t-text: #2a2118; --t-muted: rgba(42,33,24,0.64); --t-border: rgba(42,33,24,0.15);
+            --t-radius: 10px; --t-radius-lg: 18px; --t-font-head: 'Playfair Display', serif;
+            --t-hover-lift: translateY(-3px); --t-hover-shadow: 0 12px 30px rgba(42,33,24,0.12);
+        }
+        body.plantilla-tecnologica {
+            --t-bg: #090d16; --t-bg2: #0f172a; --t-surface: #111827;
+            --t-text: #f1f5f9; --t-muted: rgba(241,245,249,0.62); --t-border: rgba(56,189,248,0.22);
+            --t-radius: 12px; --t-radius-lg: 16px; --t-font-head: 'Outfit', sans-serif;
+            --t-hover-lift: translateY(-4px); --t-hover-shadow: 0 16px 40px rgba(56,189,248,0.18);
+        }
+        body.plantilla-colorida {
+            --t-bg: #150a1f; --t-bg2: #1e0f2b; --t-surface: #231433;
+            --t-text: #fdf7ff; --t-muted: rgba(253,247,255,0.64); --t-border: rgba(255,255,255,0.15);
+            --t-radius: 26px; --t-radius-lg: 30px; --t-font-head: 'Playfair Display', serif;
+            --t-hover-lift: translateY(-6px) rotate(-0.6deg); --t-hover-shadow: 0 20px 45px rgba(255,60,180,0.25);
+        }
+
+        body {
+            background: var(--custom-bg, var(--t-bg));
+            color: var(--custom-text, var(--t-text));
+            font-family: var(--custom-font-body, 'DM Sans', sans-serif);
+            font-size: var(--custom-base-size, 16px);
+        }
+
+        /* Barra superior de vista previa cuando se mira un borrador */
+        .preview-draft-banner {
+            position: sticky; top: 0; z-index: 999;
+            background: linear-gradient(90deg, #b8923c, #e2603f);
+            color: #fff; padding: 10px 20px; font-size: 13px; font-weight: 700;
+            display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+        }
+        .preview-draft-banner a {
+            background: rgba(0,0,0,0.25); color: #fff; padding: 5px 12px;
+            border-radius: 99px; text-decoration: none; font-size: 12px;
+        }
+
+        /* ── Cabecera y Editor de Portada (Hero) ── */
+        .store-header {
+            background: var(--custom-header-bg, linear-gradient(135deg, color-mix(in srgb, var(--brand, #c9a84c) 18%, var(--custom-bg, var(--t-bg))), var(--custom-bg, var(--t-bg))));
+            border-bottom: 1px solid var(--t-border, var(--border));
+            color: var(--custom-text, var(--t-text));
+            position: relative;
+            padding: 28px 24px 0;
+        }
+        .store-topbar-row {
+            max-width: 1160px; margin: 0 auto 18px;
+            display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
+        }
+        .store-brand-inline {
+            display: flex; align-items: center; gap: 14px;
+        }
+        .tienda-logo-img {
+            width: 78px; height: 78px; border-radius: var(--custom-radius, var(--t-radius-lg, 18px));
+            object-fit: cover; border: 3px solid var(--brand, #c9a84c);
+            background: var(--custom-surface, var(--t-bg2, #fff));
+        }
+        .tienda-logo-ph {
+            width: 78px; height: 78px; border-radius: var(--custom-radius, var(--t-radius-lg, 18px));
+            background: linear-gradient(135deg, var(--brand, #c9a84c), var(--brand-sec, #e2603f));
+            display: inline-flex; align-items: center; justify-content: center;
+            font-size: 32px; border: 3px solid var(--t-border, var(--border));
+        }
+        .store-eslogan {
+            font-size: .85rem; font-weight: 600; letter-spacing: .04em;
+            color: var(--brand, #c9a84c); text-transform: uppercase; margin-bottom: 4px;
+        }
+        .store-header h1, .hero-portada-title {
+            font-family: var(--custom-font-head, var(--t-font-head, 'Playfair Display', serif));
+            color: var(--custom-text, var(--t-text));
+            line-height: 1.15;
+        }
+
+        /* Diseños de portada */
+        .hero-portada {
+            max-width: 1160px; margin: 0 auto 24px;
+            border-radius: var(--custom-radius, var(--t-radius-lg, 20px));
+            overflow: hidden; position: relative;
+            border: 1px solid var(--t-border, var(--border));
+            box-shadow: var(--custom-shadow, var(--t-hover-shadow));
+        }
+        .hero-portada.diseno-impacto {
+            min-height: 320px; display: flex; align-items: center;
+            background: linear-gradient(135deg, color-mix(in srgb, var(--brand, #c9a84c) 28%, var(--custom-surface, #161625)), var(--custom-bg, #0d0d14));
+        }
+        .hero-portada.diseno-impacto .hero-bg-img {
+            position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0;
+        }
+        .hero-portada.diseno-impacto .hero-overlay {
+            position: absolute; inset: 0; z-index: 1;
+            background: rgba(10, 10, 16, var(--hero-overlay-alpha, 0.40));
+        }
+        .hero-portada.diseno-impacto .hero-content {
+            position: relative; z-index: 2; width: 100%; padding: 44px 40px;
+        }
+        .hero-portada.diseno-dividida {
+            display: grid; grid-template-columns: 1.15fr 0.85fr;
+            background: var(--custom-surface, var(--t-surface));
+        }
+        .hero-portada.diseno-dividida .hero-content { padding: 40px 36px; display: flex; flex-direction: column; justify-content: center; }
+        .hero-portada.diseno-dividida .hero-side-media { min-height: 260px; background: color-mix(in srgb, var(--brand) 15%, var(--custom-bg)); position: relative; }
+        .hero-portada.diseno-dividida .hero-side-media img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .hero-portada.diseno-editorial {
+            background: var(--custom-surface, var(--t-surface)); padding: 36px 32px;
+            border-left: 6px solid var(--brand, #c9a84c);
+        }
+        .hero-portada.diseno-minimal {
+            background: transparent; border: none; box-shadow: none; padding: 16px 4px;
+        }
+
+        .align-izquierda { text-align: left; align-items: flex-start; }
+        .align-centro    { text-align: center; align-items: center; margin-left: auto; margin-right: auto; }
+        .align-derecha   { text-align: right; align-items: flex-end; margin-left: auto; }
+
+        .hero-portada-sub {
+            font-size: .82rem; font-weight: 700; text-transform: uppercase; letter-spacing: .12em;
+            color: var(--brand, #c9a84c); margin-bottom: 8px;
+        }
+        .hero-portada-title { font-size: clamp(1.75rem, 3.2vw, 2.65rem); font-weight: 800; margin-bottom: 10px; }
+        .hero-portada-desc {
+            font-size: .98rem; line-height: 1.6; max-width: 680px; opacity: .88; margin-bottom: 18px;
+        }
+        .align-centro .hero-portada-desc { margin-left: auto; margin-right: auto; }
+        .align-derecha .hero-portada-desc { margin-left: auto; }
+        .hero-cta-row { display: inline-flex; gap: 12px; flex-wrap: wrap; margin-top: 4px; }
+
+        .btn-store-cta {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 11px 22px; font-weight: 700; font-size: .9rem;
+            border-radius: var(--custom-radius, 12px); text-decoration: none;
+            background: var(--custom-btn-bg, var(--brand, #c9a84c));
+            color: var(--custom-btn-text, #0d0d14);
+            border: 2px solid var(--custom-btn-bg, var(--brand, #c9a84c));
+            transition: transform .18s, filter .18s;
+        }
+        .btn-store-cta:hover { transform: translateY(-2px); filter: brightness(1.08); }
+        .btn-store-cta.secondary {
+            background: transparent;
+            color: var(--custom-text, var(--t-text));
+            border-color: var(--t-border, var(--border));
+        }
+        .btn-store-cta.secondary:hover { border-color: var(--brand, #c9a84c); color: var(--brand, #c9a84c); }
+
+        .store-main {
+            max-width: 1160px; margin: 0 auto; padding: 34px 24px 80px; position: relative; z-index: 1;
+        }
+        .store-section { margin-bottom: 46px; }
+        .store-sec-head {
+            display: flex; align-items: flex-end; justify-content: space-between;
+            gap: 12px; flex-wrap: wrap; margin-bottom: 20px;
+            border-bottom: 1px solid var(--t-border, var(--border)); padding-bottom: 12px;
+        }
+        .store-sec-head h2 {
+            font-family: var(--custom-font-head, var(--t-font-head, 'Playfair Display', serif));
+            font-size: 1.55rem; font-weight: 700; color: var(--custom-text, var(--t-text));
+        }
+        .store-sec-head p { font-size: .88rem; color: var(--t-muted, var(--muted)); margin-top: 3px; }
+
+        /* ── Grilla y distribuciones de productos personalizables ── */
+        .store-product-grid {
+            display: grid;
+            gap: var(--custom-grid-gap, 18px);
+            grid-template-columns: repeat(var(--custom-cols, 3), minmax(0, 1fr));
+        }
+        .store-product-grid.dist-detallada {
+            grid-template-columns: 1fr;
+        }
+        .store-product-grid.dist-detallada .prod-card {
+            flex-direction: row; align-items: stretch;
+        }
+        .store-product-grid.dist-detallada .prod-img-wrap {
+            width: 220px; padding-top: 0; min-height: 200px; flex-shrink: 0;
+        }
+        .store-product-grid.dist-compacta {
+            grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+        }
+
+        /* Estilos de tarjetas de producto */
+        .store-main .prod-card {
+            background: var(--custom-surface, var(--t-surface));
+            color: var(--custom-text, var(--t-text));
+            border-radius: var(--custom-radius, var(--t-radius));
+            box-shadow: var(--custom-shadow, none);
+            border: 1px solid var(--t-border, var(--border));
+            transition: transform .25s, box-shadow .25s, border-color .25s;
+        }
+        .store-main .prod-card.tarjeta-minimal {
+            border: none; background: transparent; box-shadow: none;
+        }
+        .store-main .prod-card.tarjeta-bordeada {
+            border: 2px solid var(--brand, #c9a84c);
+        }
+        .store-main .prod-card.tarjeta-cristal {
+            background: color-mix(in srgb, var(--custom-surface, #ffffff) 78%, transparent);
+            backdrop-filter: blur(12px);
+        }
+        .store-main .prod-card:hover {
+            border-color: var(--brand, #c9a84c);
+            transform: var(--t-hover-lift, translateY(-3px));
+        }
+        .store-main .prod-name {
+            color: var(--custom-text, var(--t-text));
+            font-family: var(--custom-font-head, inherit);
+            font-size: 1rem;
+        }
+        .store-main .prod-desc { color: var(--t-muted, var(--muted)); font-size: .83rem; line-height: 1.45; }
+        .store-main .prod-price {
+            color: var(--brand, #c9a84c);
+            font-family: var(--custom-font-head, inherit);
+        }
+
+        /* Estilos de botón de compra */
+        .store-main .btn-cart {
+            background: var(--custom-btn-bg, var(--brand, #c9a84c));
+            color: var(--custom-btn-text, #0d0d14);
+            border-radius: var(--custom-radius, 10px);
+            border: 2px solid var(--custom-btn-bg, var(--brand, #c9a84c));
+        }
+        .store-main .btn-cart.btn-estilo-contorno {
+            background: transparent;
+            color: var(--custom-btn-bg, var(--brand, #c9a84c));
+        }
+        .store-main .btn-cart.btn-estilo-capsula {
+            border-radius: 999px;
+        }
+        .store-main .btn-cart.btn-estilo-gradiente {
+            background: linear-gradient(135deg, var(--custom-btn-bg, var(--brand)), var(--brand-sec, #e2603f));
+            border-color: transparent;
+        }
+
+        /* Categorías, historia, galería, testimonios y contacto */
+        .cat-pills-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 12px;
+        }
+        .cat-pill-card {
+            display: flex; align-items: center; gap: 12px; padding: 14px 16px;
+            background: var(--custom-surface, var(--t-surface));
+            border: 1px solid var(--t-border, var(--border));
+            border-radius: var(--custom-radius, 14px);
+            text-decoration: none; color: var(--custom-text, var(--t-text));
+            font-weight: 600; transition: transform .18s, border-color .18s;
+        }
+        .cat-pill-card:hover { transform: translateY(-2px); border-color: var(--brand, #c9a84c); }
+        .cat-pill-icon {
+            width: 40px; height: 40px; border-radius: 10px;
+            background: color-mix(in srgb, var(--brand, #c9a84c) 16%, transparent);
+            display: flex; align-items: center; justify-content: center; font-size: 20px;
+        }
+
+        .story-grid {
+            display: grid; grid-template-columns: 1.3fr 1fr; gap: 20px;
+        }
+        .story-box {
+            background: var(--custom-surface, var(--t-surface));
+            border: 1px solid var(--t-border, var(--border));
+            border-radius: var(--custom-radius, 16px);
+            padding: 24px 26px; box-shadow: var(--custom-shadow, none);
+        }
+        .story-box h3 {
+            font-family: var(--custom-font-head, serif); font-size: 1.15rem;
+            margin-bottom: 10px; color: var(--brand, #c9a84c);
+        }
+        .story-box p { line-height: 1.65; font-size: .92rem; white-space: pre-line; }
+
+        .gallery-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px;
+        }
+        .gallery-item {
+            border-radius: var(--custom-radius, 16px); overflow: hidden;
+            border: 1px solid var(--t-border, var(--border)); height: 220px;
+            background: var(--custom-surface, var(--t-surface));
+        }
+        .gallery-item img { width: 100%; height: 100%; object-fit: cover; transition: transform .35s; }
+        .gallery-item:hover img { transform: scale(1.05); }
+
+        .testimonials-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 16px;
+        }
+        .testimonial-card {
+            background: var(--custom-surface, var(--t-surface));
+            border: 1px solid var(--t-border, var(--border));
+            border-radius: var(--custom-radius, 16px);
+            padding: 20px 22px; box-shadow: var(--custom-shadow, none);
+        }
+        .testimonial-stars { color: #eab308; font-size: .85rem; margin-bottom: 10px; }
+        .testimonial-text { font-size: .9rem; line-height: 1.55; margin-bottom: 12px; font-style: italic; }
+        .testimonial-author { font-size: .82rem; font-weight: 700; color: var(--brand, #c9a84c); }
+
+        .contact-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px;
+        }
+        .contact-card {
+            background: var(--custom-surface, var(--t-surface));
+            border: 1px solid var(--t-border, var(--border));
+            border-radius: var(--custom-radius, 16px);
+            padding: 20px 22px;
+        }
+        .contact-card h4 {
+            font-size: .78rem; text-transform: uppercase; letter-spacing: .08em;
+            color: var(--brand, #c9a84c); margin-bottom: 10px;
+        }
+        .social-pill-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 10px; }
+        .social-pill {
+            display: inline-flex; align-items: center; gap: 7px;
+            padding: 8px 14px; border-radius: 99px; font-size: .82rem; font-weight: 600;
+            background: color-mix(in srgb, var(--brand, #c9a84c) 14%, transparent);
+            border: 1px solid var(--t-border, var(--border));
+            color: var(--custom-text, var(--t-text)); text-decoration: none;
+        }
+        .social-pill:hover { border-color: var(--brand, #c9a84c); color: var(--brand, #c9a84c); }
+
+        .store-footer {
+            border-top: 1px solid var(--t-border, var(--border));
+            background: var(--custom-header-bg, var(--custom-surface, var(--t-surface)));
+            padding: 32px 24px; margin-top: 40px;
+        }
+        .store-footer-inner {
+            max-width: 1160px; margin: 0 auto;
+            display: flex; justify-content: space-between; align-items: center; gap: 18px; flex-wrap: wrap;
+        }
+
+        @media (max-width: 900px) {
+            .store-product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .hero-portada.diseno-dividida, .story-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 560px) {
+            .store-product-grid { grid-template-columns: 1fr; }
+            .store-header { padding: 20px 14px 0; }
+            .store-main { padding: 20px 14px 60px; }
+            .hero-portada.diseno-impacto .hero-content { padding: 28px 20px; }
+        }
+    </style>
 </head>
-<body>
-    <header>
-        <h1 th:text="${tienda.nombre}">Nombre de la tienda</h1>
-        <a th:href="@{/cliente}">← Volver al catálogo</a>
-        <a th:href="@{/logout}">Cerrar Sesión</a>
-    </header>
-    <main>
-        <p th:text="${tienda.descripcion}">Descripción</p>
+<body th:class="'plantilla-' + ${cfg.plantilla}"
+      th:style="'--brand:' + ${cfg.colorPrimario}
+              + ';--brand-sec:' + ${cfg.colorSecundario}
+              + ';--custom-bg:' + ${cfg.colorFondo}
+              + ';--custom-surface:' + ${cfg.colorSuperficie}
+              + ';--custom-text:' + ${cfg.colorTexto}
+              + ';--custom-btn-bg:' + ${cfg.colorBotones}
+              + ';--custom-btn-text:' + ${cfg.colorTextoBotones}
+              + ';--custom-header-bg:' + ${cfg.colorEncabezado}
+              + ';--custom-font-head:\'' + ${cfg.fuenteTitulos} + '\', serif'
+              + ';--custom-font-body:\'' + ${cfg.fuenteCuerpo} + '\', sans-serif'
+              + ';--custom-base-size:' + ${cfg.tamanoBaseCss}
+              + ';--custom-radius:' + ${cfg.radioCss}
+              + ';--custom-shadow:' + ${cfg.sombraCss}
+              + ';--custom-grid-gap:' + ${cfg.gapGridCss}
+              + ';--custom-cols:' + ${cfg.columnasProductos}
+              + ';--hero-overlay-alpha:' + (${cfg.portadaOverlay} / 100.0)">
+<div class="bg-grid"></div>
+<div class="bg-glow a"></div>
+<div class="bg-glow b"></div>
 
-        <h2>Productos</h2>
-        <p th:if="${#lists.isEmpty(productos)}">
-            Esta tienda todavía no tiene productos publicados.
-        </p>
+<!-- Aviso de vista previa de borrador (solo para el emprendedor dueño o administrador) -->
+<div class="preview-draft-banner" th:if="${modoPreviewBorrador}">
+    <span>📝 Estás viendo la vista previa del <strong>borrador</strong> de tu tienda. Los visitantes ven la versión publicada.</span>
+    <div style="display:flex;gap:8px">
+        <a th:href="@{/emprendedor/constructor}">✨ Volver al Constructor</a>
+        <a th:href="@{/tienda/{id}(id=${tienda.id})}">🌐 Ver versión publicada</a>
+    </div>
+</div>
 
-        <div th:each="p : ${productos}" style="border:1px solid #ddd; padding:12px; margin-bottom:10px; border-radius:8px;">
-            <h3 th:text="${p.nombre}">Producto</h3>
-            <p th:text="${p.descripcion}">Descripción</p>
-            <p th:text="'$' + ${#numbers.formatDecimal(p.precio, 1, 'POINT', 0, 'COMMA')}">Precio</p>
-            <p th:text="'Stock: ' + ${p.stock}">Stock</p>
+<!-- ══════════════════════ ENCABEZADO Y PORTADA (HERO) ══════════════════════ -->
+<header class="store-header" th:style="'border-top:6px solid ' + ${cfg.colorPrimario}">
+    <div class="store-topbar-row">
+        <div>
+            <a th:if="${rolAutenticado == 'emprendedor'}" th:href="@{/emprendedor}" class="back-link">← Volver a mi panel</a>
+            <a th:if="${rolAutenticado == 'administrador'}" th:href="@{/admin}" class="back-link">← Volver al panel admin</a>
+            <a th:if="${rolAutenticado == 'cliente'}" th:href="@{/cliente}" class="back-link">← Volver al catálogo</a>
+            <a th:if="${rolAutenticado == null}" th:href="@{/}" class="back-link">← Volver al inicio</a>
         </div>
-    </main>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
+            <a th:if="${esDuenoTienda}" th:href="@{/emprendedor/constructor}"
+               class="social-pill" style="font-size:.78rem">
+                <i class="fas fa-wand-magic-sparkles"></i> Personalizar tienda
+            </a>
+            <div class="plantilla-badge" style="margin-top:0">
+                <span class="plantilla-dot"></span>
+                <span>Tienda en Caboré Marketplace</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="store-header-inner">
+        <!-- Identidad de marca -->
+        <div class="store-brand-inline"
+             th:style="${cfg.estiloEncabezado == 'centrado'} ? 'flex-direction:column;text-align:center' : ''">
+            <div>
+                <img th:if="${cfg.rutaLogoPublica != null}" th:src="${cfg.rutaLogoPublica}" class="tienda-logo-img" th:alt="${cfg.nombre}">
+                <div th:unless="${cfg.rutaLogoPublica != null}" class="tienda-logo-ph">🏪</div>
+            </div>
+            <div>
+                <div class="store-eslogan" th:if="${cfg.eslogan != null and !cfg.eslogan.isBlank()}" th:text="${cfg.eslogan}">Eslogan</div>
+                <h1 th:text="${cfg.nombre}">Nombre de la tienda</h1>
+                <p th:text="${cfg.descripcion}">Descripción</p>
+            </div>
+        </div>
+
+        <!-- Enlaces rápidos de contacto y redes en cabecera -->
+        <div class="store-meta" style="margin-top:14px"
+             th:style="${cfg.estiloEncabezado == 'centrado'} ? 'justify-content:center' : ''">
+            <span th:if="${cfg.ciudad != null and !cfg.ciudad.isBlank()}">
+                <i class="fas fa-map-marker-alt"></i> <span th:text="${cfg.ciudad}"></span>
+            </span>
+            <a th:if="${!#strings.isEmpty(cfg.whatsappDigitos)}"
+               th:href="'https://wa.me/' + ${cfg.whatsappDigitos}" target="_blank" rel="noopener">
+                <i class="fab fa-whatsapp"></i> WhatsApp</a>
+            <a th:if="${!#strings.isEmpty(cfg.instagramLimpio)}"
+               th:href="'https://instagram.com/' + ${cfg.instagramLimpio}" target="_blank" rel="noopener">
+                <i class="fab fa-instagram"></i> Instagram</a>
+            <a th:if="${cfg.facebook != null and !cfg.facebook.isBlank()}"
+               th:href="${cfg.facebook.startsWith('http') ? cfg.facebook : 'https://facebook.com/' + cfg.facebook}"
+               target="_blank" rel="noopener">
+                <i class="fab fa-facebook"></i> Facebook</a>
+            <a th:if="${!#strings.isEmpty(cfg.tiktokLimpio)}"
+               th:href="'https://tiktok.com/@' + ${cfg.tiktokLimpio}" target="_blank" rel="noopener">
+                <i class="fab fa-tiktok"></i> TikTok</a>
+            <a th:if="${rolAutenticado == null or rolAutenticado == 'cliente'}"
+               th:href="@{/chat/iniciar(tiendaId=${tienda.id})}" class="social-contact-link">
+                <i class="far fa-comment-dots"></i> Contactar tienda</a>
+            <a th:if="${rolAutenticado == 'emprendedor'}"
+               th:href="@{/chat}" class="social-contact-link">
+                <i class="far fa-comment-dots"></i> Ver mis mensajes</a>
+        </div>
+
+        <!-- Portada Hero personalizable -->
+        <div class="hero-portada" style="margin-top:22px"
+             th:classappend="'diseno-' + ${cfg.portadaDiseno}">
+            <th:block th:if="${cfg.portadaDiseno == 'impacto'}">
+                <img th:if="${cfg.rutaBannerPublica != null}" th:src="${cfg.rutaBannerPublica}"
+                     class="hero-bg-img" th:alt="'Banner de ' + ${cfg.nombre}">
+                <div class="hero-overlay" th:if="${cfg.rutaBannerPublica != null}"></div>
+                <div class="hero-content" th:classappend="'align-' + ${cfg.portadaAlineacion}"
+                     th:style="${cfg.rutaBannerPublica != null} ? 'color:#ffffff' : ''">
+                    <div class="hero-portada-sub" th:if="${cfg.portadaSubtitulo != null and !cfg.portadaSubtitulo.isBlank()}"
+                         th:text="${cfg.portadaSubtitulo}">Subtítulo</div>
+                    <h2 class="hero-portada-title"
+                        th:style="${cfg.rutaBannerPublica != null} ? 'color:#ffffff' : ''"
+                        th:text="${cfg.portadaTitulo != null and !cfg.portadaTitulo.isBlank() ? cfg.portadaTitulo : cfg.nombre}">Título</h2>
+                    <p class="hero-portada-desc"
+                       th:if="${cfg.portadaDescripcion != null and !cfg.portadaDescripcion.isBlank()}"
+                       th:text="${cfg.portadaDescripcion}">Descripción de portada</p>
+                    <div class="hero-cta-row">
+                        <a th:if="${cfg.portadaBotonTexto != null and !cfg.portadaBotonTexto.isBlank()}"
+                           th:href="${cfg.portadaBotonUrl}" class="btn-store-cta">
+                            <span th:text="${cfg.portadaBotonTexto}">Explorar</span> <i class="fas fa-arrow-right"></i>
+                        </a>
+                        <a th:if="${cfg.portadaBoton2Texto != null and !cfg.portadaBoton2Texto.isBlank()}"
+                           th:href="${cfg.portadaBoton2Url}" class="btn-store-cta secondary"
+                           th:style="${cfg.rutaBannerPublica != null} ? 'color:#fff;border-color:rgba(255,255,255,0.45)' : ''"
+                           th:text="${cfg.portadaBoton2Texto}">Contacto</a>
+                    </div>
+                </div>
+            </th:block>
+
+            <th:block th:if="${cfg.portadaDiseno == 'dividida'}">
+                <div class="hero-content" th:classappend="'align-' + ${cfg.portadaAlineacion}">
+                    <div class="hero-portada-sub" th:if="${cfg.portadaSubtitulo != null and !cfg.portadaSubtitulo.isBlank()}"
+                         th:text="${cfg.portadaSubtitulo}">Subtítulo</div>
+                    <h2 class="hero-portada-title"
+                        th:text="${cfg.portadaTitulo != null and !cfg.portadaTitulo.isBlank() ? cfg.portadaTitulo : cfg.nombre}">Título</h2>
+                    <p class="hero-portada-desc"
+                       th:if="${cfg.portadaDescripcion != null and !cfg.portadaDescripcion.isBlank()}"
+                       th:text="${cfg.portadaDescripcion}">Descripción</p>
+                    <div class="hero-cta-row">
+                        <a th:if="${cfg.portadaBotonTexto != null and !cfg.portadaBotonTexto.isBlank()}"
+                           th:href="${cfg.portadaBotonUrl}" class="btn-store-cta"
+                           th:text="${cfg.portadaBotonTexto}">Explorar</a>
+                        <a th:if="${cfg.portadaBoton2Texto != null and !cfg.portadaBoton2Texto.isBlank()}"
+                           th:href="${cfg.portadaBoton2Url}" class="btn-store-cta secondary"
+                           th:text="${cfg.portadaBoton2Texto}">Contacto</a>
+                    </div>
+                </div>
+                <div class="hero-side-media">
+                    <img th:if="${cfg.rutaBannerPublica != null}" th:src="${cfg.rutaBannerPublica}" th:alt="${cfg.nombre}">
+                    <div th:unless="${cfg.rutaBannerPublica != null}"
+                         style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:64px">🛍️</div>
+                </div>
+            </th:block>
+
+            <th:block th:if="${cfg.portadaDiseno == 'editorial' or cfg.portadaDiseno == 'minimal'}">
+                <div class="hero-content" th:classappend="'align-' + ${cfg.portadaAlineacion}">
+                    <div class="hero-portada-sub" th:if="${cfg.portadaSubtitulo != null and !cfg.portadaSubtitulo.isBlank()}"
+                         th:text="${cfg.portadaSubtitulo}">Subtítulo</div>
+                    <h2 class="hero-portada-title"
+                        th:text="${cfg.portadaTitulo != null and !cfg.portadaTitulo.isBlank() ? cfg.portadaTitulo : cfg.nombre}">Título</h2>
+                    <p class="hero-portada-desc"
+                       th:if="${cfg.portadaDescripcion != null and !cfg.portadaDescripcion.isBlank()}"
+                       th:text="${cfg.portadaDescripcion}">Descripción</p>
+                    <div class="hero-cta-row">
+                        <a th:if="${cfg.portadaBotonTexto != null and !cfg.portadaBotonTexto.isBlank()}"
+                           th:href="${cfg.portadaBotonUrl}" class="btn-store-cta"
+                           th:text="${cfg.portadaBotonTexto}">Explorar</a>
+                        <a th:if="${cfg.portadaBoton2Texto != null and !cfg.portadaBoton2Texto.isBlank()}"
+                           th:href="${cfg.portadaBoton2Url}" class="btn-store-cta secondary"
+                           th:text="${cfg.portadaBoton2Texto}">Contacto</a>
+                    </div>
+                </div>
+            </th:block>
+        </div>
+    </div>
+
+    <nav class="store-nav">
+        <th:block th:if="${esClienteAutenticado}">
+            <a th:href="@{/cliente}" class="store-nav-item"><i class="fas fa-compass"></i> Catálogo</a>
+            <a th:href="@{/chat}" class="store-nav-item"><i class="far fa-comment-dots"></i> Mensajes
+                <span class="cart-badge" th:if="${mensajesNoLeidosCount != null and mensajesNoLeidosCount > 0}" th:text="${mensajesNoLeidosCount}">0</span></a>
+            <a th:href="@{/cliente/carrito}" class="store-nav-item"><i class="fas fa-shopping-bag"></i> Carrito
+                <span class="cart-badge" th:if="${carritoCount != null and carritoCount > 0}" th:text="${carritoCount}">0</span></a>
+            <a th:href="@{/cliente/favoritos}" class="store-nav-item"><i class="far fa-heart"></i> Favoritos</a>
+            <a th:href="@{/cliente/pedidos}" class="store-nav-item"><i class="fas fa-box"></i> Pedidos</a>
+            <a th:href="@{/cliente/perfil}" class="store-nav-item"><i class="far fa-user"></i> Perfil</a>
+        </th:block>
+        <th:block th:if="${rolAutenticado == 'emprendedor'}">
+            <a th:href="@{/emprendedor}" class="store-nav-item"><i class="fas fa-store"></i> Mi panel</a>
+            <a th:href="@{/emprendedor/constructor}" class="store-nav-item"><i class="fas fa-wand-magic-sparkles"></i> Constructor</a>
+            <a th:href="@{/chat}" class="store-nav-item"><i class="far fa-comment-dots"></i> Mensajes</a>
+        </th:block>
+        <th:block th:if="${rolAutenticado == 'administrador'}">
+            <a th:href="@{/admin}" class="store-nav-item"><i class="fas fa-shield-halved"></i> Panel Admin</a>
+        </th:block>
+        <th:block th:if="${!estaAutenticado}">
+            <a th:href="@{/login}" class="store-nav-item"><i class="fas fa-right-to-bracket"></i> Iniciar sesión</a>
+            <a th:href="@{/registro}" class="store-nav-item"><i class="fas fa-user-plus"></i> Crear cuenta</a>
+        </th:block>
+        <form th:if="${estaAutenticado}" th:action="@{/logout}" method="post" class="store-nav-form">
+            <button type="submit" class="store-nav-item danger store-nav-logout"><i class="fas fa-sign-out-alt"></i> Cerrar sesión</button>
+        </form>
+    </nav>
+</header>
+
+<!-- ══════════════════════ SECCIONES DINÁMICAS DE LA TIENDA ══════════════════════ -->
+<main class="store-main">
+    <div class="flash ok" th:if="${flashOk}"><i class="fas fa-check-circle"></i> <span th:text="${flashOk}"></span></div>
+    <div class="flash err" th:if="${flashErr}"><i class="fas fa-exclamation-circle"></i> <span th:text="${flashErr}"></span></div>
+
+    <th:block th:each="sec : ${cfg.secciones}" th:if="${sec.visible}">
+
+        <!-- ── SECCIÓN: CATEGORÍAS ── -->
+        <section class="store-section" th:if="${sec.id == 'categorias' and !#lists.isEmpty(categoriasTienda)}" id="seccion-categorias">
+            <div class="store-sec-head">
+                <div>
+                    <h2 th:text="${sec.titulo}">Categorías</h2>
+                    <p th:if="${sec.subtitulo != null and !sec.subtitulo.isBlank()}" th:text="${sec.subtitulo}"></p>
+                </div>
+            </div>
+            <div class="cat-pills-grid">
+                <a class="cat-pill-card" th:each="c : ${categoriasTienda}"
+                   th:href="@{/tienda/{id}(id=${tienda.id}, categoria=${c.id})}">
+                    <span class="cat-pill-icon" th:text="${c.iconoSeguro}">🏷️</span>
+                    <span th:text="${c.nombre}">Categoría</span>
+                </a>
+            </div>
+        </section>
+
+        <!-- ── SECCIÓN: DESTACADOS ── -->
+        <section class="store-section" th:if="${sec.id == 'destacados' and !#lists.isEmpty(productosDestacadosTienda) and !hayFiltroTienda}" id="seccion-destacados">
+            <div class="store-sec-head">
+                <div>
+                    <h2 th:text="${sec.titulo}">Productos destacados</h2>
+                    <p th:if="${sec.subtitulo != null and !sec.subtitulo.isBlank()}" th:text="${sec.subtitulo}"></p>
+                </div>
+            </div>
+            <div class="store-product-grid" th:classappend="'dist-' + ${cfg.distribucionProductos}">
+                <div class="prod-card" th:each="p : ${productosDestacadosTienda}"
+                     th:classappend="'tarjeta-' + ${cfg.estiloTarjeta}">
+                    <div class="prod-img-wrap">
+                        <img th:if="${p.rutaImagen != null}" th:src="${p.rutaImagen}" th:alt="${p.nombre}" loading="lazy">
+                        <div class="no-img" th:unless="${p.rutaImagen != null}"><i class="fas fa-box-open"></i></div>
+                        <span class="badge-oferta" th:if="${cfg.mostrarDescuentos and p.tieneOferta}" th:text="'-' + ${p.descuento} + '%'">-0%</span>
+                    </div>
+                    <div class="prod-body">
+                        <div class="prod-name" th:text="${p.nombre}">Producto</div>
+                        <p class="prod-desc" th:if="${cfg.mostrarDescripcionProd and p.descripcion != null}" th:text="${p.descripcion}"></p>
+                        <div class="prod-rating" th:if="${cfg.mostrarCalificaciones and p.ratingPromedio != null and p.ratingPromedio > 0}">
+                            <th:block th:each="i : ${#numbers.sequence(1, 5)}">
+                                <i th:class="${i <= p.ratingPromedio + 0.49} ? 'fas fa-star' : 'far fa-star'"></i>
+                            </th:block>
+                            <span th:text="'(' + ${p.totalResenas} + ')'">(0)</span>
+                        </div>
+                        <div class="prod-price-row" th:if="${cfg.mostrarPrecios}">
+                            <span class="prod-price" th:classappend="${p.tieneOferta} ? 'oferta'"
+                                  th:text="'$' + ${#numbers.formatDecimal(p.precioActual, 1, 'POINT', 0, 'COMMA')}">$0</span>
+                            <span class="prod-price-old" th:if="${cfg.mostrarDescuentos and p.tieneOferta}"
+                                  th:text="'$' + ${#numbers.formatDecimal(p.precio, 1, 'POINT', 0, 'COMMA')}">$0</span>
+                        </div>
+                        <div class="prod-stock" th:if="${cfg.mostrarEtiquetas}"
+                             th:classappend="${p.stock <= 0} ? 'out'"
+                             th:text="${p.stock > 0} ? ('Stock: ' + ${p.stock}) : 'Agotado'">Stock</div>
+                    </div>
+                    <div class="prod-footer" th:if="${rolAutenticado == null or rolAutenticado == 'cliente'}">
+                        <form th:action="@{/cliente/carrito/agregar}" method="post" class="inline-form" style="flex:1">
+                            <input type="hidden" name="productoId" th:value="${p.id}">
+                            <input type="hidden" name="cantidad" value="1">
+                            <input type="hidden" name="volver" th:value="'/tienda/' + ${tienda.id}">
+                            <button type="submit" class="btn-cart"
+                                    th:classappend="'btn-estilo-' + ${cfg.estiloBotonCompra}"
+                                    th:disabled="${p.stock <= 0}">
+                                <i class="fas fa-bag-shopping"></i>
+                                <span th:text="${p.stock > 0 ? cfg.textoBotonCompra : 'Agotado'}">Agregar</span>
+                            </button>
+                        </form>
+                        <a class="btn-ficha" th:href="@{/cliente/producto/{id}(id=${p.id})}">Ficha</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── SECCIÓN: OFERTAS Y DESCUENTOS ── -->
+        <section class="store-section" th:if="${sec.id == 'ofertas' and !#lists.isEmpty(productosOfertaTienda) and !hayFiltroTienda}" id="seccion-ofertas">
+            <div class="store-sec-head">
+                <div>
+                    <h2 th:text="${sec.titulo}">Ofertas y descuentos</h2>
+                    <p th:if="${sec.subtitulo != null and !sec.subtitulo.isBlank()}" th:text="${sec.subtitulo}"></p>
+                </div>
+            </div>
+            <div class="store-product-grid" th:classappend="'dist-' + ${cfg.distribucionProductos}">
+                <div class="prod-card" th:each="p : ${productosOfertaTienda}"
+                     th:classappend="'tarjeta-' + ${cfg.estiloTarjeta}">
+                    <div class="prod-img-wrap">
+                        <img th:if="${p.rutaImagen != null}" th:src="${p.rutaImagen}" th:alt="${p.nombre}" loading="lazy">
+                        <div class="no-img" th:unless="${p.rutaImagen != null}"><i class="fas fa-box-open"></i></div>
+                        <span class="badge-oferta" th:if="${cfg.mostrarDescuentos and p.tieneOferta}" th:text="'-' + ${p.descuento} + '%'">-0%</span>
+                    </div>
+                    <div class="prod-body">
+                        <div class="prod-name" th:text="${p.nombre}">Producto</div>
+                        <div class="prod-price-row" th:if="${cfg.mostrarPrecios}">
+                            <span class="prod-price oferta"
+                                  th:text="'$' + ${#numbers.formatDecimal(p.precioActual, 1, 'POINT', 0, 'COMMA')}">$0</span>
+                            <span class="prod-price-old" th:if="${cfg.mostrarDescuentos}"
+                                  th:text="'$' + ${#numbers.formatDecimal(p.precio, 1, 'POINT', 0, 'COMMA')}">$0</span>
+                        </div>
+                    </div>
+                    <div class="prod-footer" th:if="${rolAutenticado == null or rolAutenticado == 'cliente'}">
+                        <form th:action="@{/cliente/carrito/agregar}" method="post" class="inline-form" style="flex:1">
+                            <input type="hidden" name="productoId" th:value="${p.id}">
+                            <input type="hidden" name="cantidad" value="1">
+                            <input type="hidden" name="volver" th:value="'/tienda/' + ${tienda.id}">
+                            <button type="submit" class="btn-cart"
+                                    th:classappend="'btn-estilo-' + ${cfg.estiloBotonCompra}"
+                                    th:disabled="${p.stock <= 0}">
+                                <i class="fas fa-bag-shopping"></i> <span th:text="${cfg.textoBotonCompra}">Agregar</span>
+                            </button>
+                        </form>
+                        <a class="btn-ficha" th:href="@{/cliente/producto/{id}(id=${p.id})}">Ficha</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── SECCIÓN: MÁS VENDIDOS ── -->
+        <section class="store-section" th:if="${sec.id == 'mas_vendidos' and !#lists.isEmpty(productosMasVendidosTienda) and !hayFiltroTienda}" id="seccion-mas-vendidos">
+            <div class="store-sec-head">
+                <div>
+                    <h2 th:text="${sec.titulo}">Más vendidos</h2>
+                    <p th:if="${sec.subtitulo != null and !sec.subtitulo.isBlank()}" th:text="${sec.subtitulo}"></p>
+                </div>
+            </div>
+            <div class="store-product-grid" th:classappend="'dist-' + ${cfg.distribucionProductos}">
+                <div class="prod-card" th:each="p : ${productosMasVendidosTienda}"
+                     th:classappend="'tarjeta-' + ${cfg.estiloTarjeta}">
+                    <div class="prod-img-wrap">
+                        <img th:if="${p.rutaImagen != null}" th:src="${p.rutaImagen}" th:alt="${p.nombre}" loading="lazy">
+                        <div class="no-img" th:unless="${p.rutaImagen != null}"><i class="fas fa-box-open"></i></div>
+                        <span class="badge-destacado" th:if="${cfg.mostrarEtiquetas}">🔥 Top</span>
+                    </div>
+                    <div class="prod-body">
+                        <div class="prod-name" th:text="${p.nombre}">Producto</div>
+                        <div class="prod-price-row" th:if="${cfg.mostrarPrecios}">
+                            <span class="prod-price" th:classappend="${p.tieneOferta} ? 'oferta'"
+                                  th:text="'$' + ${#numbers.formatDecimal(p.precioActual, 1, 'POINT', 0, 'COMMA')}">$0</span>
+                        </div>
+                    </div>
+                    <div class="prod-footer" th:if="${rolAutenticado == null or rolAutenticado == 'cliente'}">
+                        <form th:action="@{/cliente/carrito/agregar}" method="post" class="inline-form" style="flex:1">
+                            <input type="hidden" name="productoId" th:value="${p.id}">
+                            <input type="hidden" name="cantidad" value="1">
+                            <input type="hidden" name="volver" th:value="'/tienda/' + ${tienda.id}">
+                            <button type="submit" class="btn-cart"
+                                    th:classappend="'btn-estilo-' + ${cfg.estiloBotonCompra}"
+                                    th:disabled="${p.stock <= 0}">
+                                <i class="fas fa-bag-shopping"></i> <span th:text="${cfg.textoBotonCompra}">Agregar</span>
+                            </button>
+                        </form>
+                        <a class="btn-ficha" th:href="@{/cliente/producto/{id}(id=${p.id})}">Ficha</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── SECCIÓN: NUEVOS PRODUCTOS ── -->
+        <section class="store-section" th:if="${sec.id == 'nuevos' and !#lists.isEmpty(productosNuevosTienda) and !hayFiltroTienda}" id="seccion-nuevos">
+            <div class="store-sec-head">
+                <div>
+                    <h2 th:text="${sec.titulo}">Nuevos productos</h2>
+                    <p th:if="${sec.subtitulo != null and !sec.subtitulo.isBlank()}" th:text="${sec.subtitulo}"></p>
+                </div>
+            </div>
+            <div class="store-product-grid" th:classappend="'dist-' + ${cfg.distribucionProductos}">
+                <div class="prod-card" th:each="p : ${productosNuevosTienda}"
+                     th:classappend="'tarjeta-' + ${cfg.estiloTarjeta}">
+                    <div class="prod-img-wrap">
+                        <img th:if="${p.rutaImagen != null}" th:src="${p.rutaImagen}" th:alt="${p.nombre}" loading="lazy">
+                        <div class="no-img" th:unless="${p.rutaImagen != null}"><i class="fas fa-box-open"></i></div>
+                        <span class="badge-destacado" th:if="${cfg.mostrarEtiquetas}">🆕 Nuevo</span>
+                    </div>
+                    <div class="prod-body">
+                        <div class="prod-name" th:text="${p.nombre}">Producto</div>
+                        <div class="prod-price-row" th:if="${cfg.mostrarPrecios}">
+                            <span class="prod-price" th:classappend="${p.tieneOferta} ? 'oferta'"
+                                  th:text="'$' + ${#numbers.formatDecimal(p.precioActual, 1, 'POINT', 0, 'COMMA')}">$0</span>
+                        </div>
+                    </div>
+                    <div class="prod-footer" th:if="${rolAutenticado == null or rolAutenticado == 'cliente'}">
+                        <form th:action="@{/cliente/carrito/agregar}" method="post" class="inline-form" style="flex:1">
+                            <input type="hidden" name="productoId" th:value="${p.id}">
+                            <input type="hidden" name="cantidad" value="1">
+                            <input type="hidden" name="volver" th:value="'/tienda/' + ${tienda.id}">
+                            <button type="submit" class="btn-cart"
+                                    th:classappend="'btn-estilo-' + ${cfg.estiloBotonCompra}"
+                                    th:disabled="${p.stock <= 0}">
+                                <i class="fas fa-bag-shopping"></i> <span th:text="${cfg.textoBotonCompra}">Agregar</span>
+                            </button>
+                        </form>
+                        <a class="btn-ficha" th:href="@{/cliente/producto/{id}(id=${p.id})}">Ficha</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── SECCIÓN: CATÁLOGO COMPLETO DE PRODUCTOS ── -->
+        <section class="store-section" th:if="${sec.id == 'catalogo'}" id="seccion-catalogo">
+            <div class="store-sec-head">
+                <div>
+                    <h2 th:text="${sec.titulo}">Productos</h2>
+                    <p th:if="${sec.subtitulo != null and !sec.subtitulo.isBlank()}" th:text="${sec.subtitulo}"></p>
+                </div>
+                <span th:text="${#lists.size(productos)} + (${#lists.size(productos) == 1 ? ' producto' : ' productos'})">0</span>
+            </div>
+
+            <form class="store-filter-bar" method="get" th:action="@{/tienda/{id}(id=${tienda.id})}"
+                  th:if="${totalProductosTienda != null and totalProductosTienda > 0}">
+                <div class="store-search-input">
+                    <i class="fas fa-search"></i>
+                    <input type="text" name="q" placeholder="Buscar en esta tienda…" th:value="${qTienda}" autocomplete="off">
+                </div>
+                <select name="categoria" class="order-select" style="width:auto;min-width:170px"
+                        th:if="${!#lists.isEmpty(categoriasTienda)}" onchange="this.form.submit()">
+                    <option value="">Todas las categorías</option>
+                    <option th:each="c : ${categoriasTienda}"
+                            th:value="${c.id}"
+                            th:selected="${categoriaTiendaSel != null and categoriaTiendaSel == c.id}"
+                            th:text="${c.iconoSeguro + ' ' + c.nombre}">Categoría</option>
+                </select>
+                <label class="store-filter-check">
+                    <input type="checkbox" name="oferta" value="true" th:checked="${ofertaTienda}" onchange="this.form.submit()">
+                    <span>🏷️ En oferta</span>
+                </label>
+                <select name="orden" class="order-select" style="width:auto;min-width:180px" onchange="this.form.submit()">
+                    <option value="reciente"    th:selected="${ordenTienda == 'reciente'}">Más recientes</option>
+                    <option value="precio_asc"  th:selected="${ordenTienda == 'precio_asc'}">Precio: menor a mayor</option>
+                    <option value="precio_desc" th:selected="${ordenTienda == 'precio_desc'}">Precio: mayor a menor</option>
+                    <option value="nombre"      th:selected="${ordenTienda == 'nombre'}">Nombre A–Z</option>
+                </select>
+                <button type="submit" class="price-apply">Buscar</button>
+                <a th:if="${hayFiltroTienda}" th:href="@{/tienda/{id}(id=${tienda.id})}" class="reset-filters" style="margin-top:0">✕ Limpiar</a>
+            </form>
+
+            <p th:if="${#lists.isEmpty(productos)}" class="store-empty"
+               th:text="${hayFiltroTienda != null and hayFiltroTienda} ? 'No hay productos en esta tienda que coincidan con tu búsqueda.' : 'Esta tienda todavía no tiene productos publicados.'">
+                Esta tienda todavía no tiene productos publicados.
+            </p>
+
+            <div class="store-product-grid" th:unless="${#lists.isEmpty(productos)}"
+                 th:classappend="'dist-' + ${cfg.distribucionProductos}">
+                <div class="prod-card" th:each="p : ${productos}"
+                     th:classappend="'tarjeta-' + ${cfg.estiloTarjeta}">
+                    <div class="prod-img-wrap">
+                        <img th:if="${p.rutaImagen != null}" th:src="${p.rutaImagen}" th:alt="${p.nombre}" loading="lazy">
+                        <div class="no-img" th:unless="${p.rutaImagen != null}"><i class="fas fa-box-open"></i></div>
+                        <span class="badge-oferta" th:if="${cfg.mostrarDescuentos and p.tieneOferta}" th:text="'-' + ${p.descuento} + '%'">-0%</span>
+                        <form th:if="${rolAutenticado == null or rolAutenticado == 'cliente'}"
+                              th:action="@{/cliente/favoritos/toggle}" method="post" class="fav-form"
+                              th:with="esFav=${favoritosIds != null and favoritosIds.contains(p.id)}">
+                            <input type="hidden" name="productoId" th:value="${p.id}">
+                            <input type="hidden" name="volver" th:value="'/tienda/' + ${tienda.id}">
+                            <button type="submit" class="fav-btn" th:classappend="${esFav} ? 'active'" title="Guardar en favoritos">
+                                <i th:class="${esFav} ? 'fas fa-heart' : 'far fa-heart'"></i>
+                            </button>
+                        </form>
+                    </div>
+                    <div class="prod-body">
+                        <div th:if="${cfg.mostrarEtiquetas and p.categoriaId != null and categoriasMap != null and categoriasMap.containsKey(p.categoriaId)}"
+                             style="font-size:.72rem;color:var(--brand);font-weight:700;text-transform:uppercase;letter-spacing:.05em"
+                             th:text="${categoriasMap.get(p.categoriaId).iconoSeguro + ' ' + categoriasMap.get(p.categoriaId).nombre}">Categoría</div>
+                        <div class="prod-name" th:text="${p.nombre}">Producto</div>
+                        <p class="prod-desc" th:if="${cfg.mostrarDescripcionProd}" th:text="${p.descripcion}">Descripción</p>
+                        <div class="prod-rating" th:if="${cfg.mostrarCalificaciones and p.ratingPromedio != null and p.ratingPromedio > 0}">
+                            <th:block th:each="i : ${#numbers.sequence(1, 5)}">
+                                <i th:class="${i <= p.ratingPromedio + 0.49} ? 'fas fa-star' : 'far fa-star'"></i>
+                            </th:block>
+                            <span th:text="'(' + ${p.totalResenas} + ')'">(0)</span>
+                        </div>
+                        <div class="prod-price-row" th:if="${cfg.mostrarPrecios}">
+                            <span class="prod-price" th:classappend="${p.tieneOferta} ? 'oferta'"
+                                  th:text="'$' + ${#numbers.formatDecimal(p.precioActual, 1, 'POINT', 0, 'COMMA')}">$0</span>
+                            <span class="prod-price-old" th:if="${cfg.mostrarDescuentos and p.tieneOferta}"
+                                  th:text="'$' + ${#numbers.formatDecimal(p.precio, 1, 'POINT', 0, 'COMMA')}">$0</span>
+                        </div>
+                        <div class="prod-stock" th:if="${cfg.mostrarEtiquetas}"
+                             th:classappend="${p.stock <= 0} ? 'out'"
+                             th:text="${p.stock > 0} ? ('Stock: ' + ${p.stock}) : 'Agotado'">Stock: 0</div>
+                    </div>
+                    <div class="prod-footer" th:if="${rolAutenticado == null or rolAutenticado == 'cliente'}">
+                        <form th:action="@{/cliente/carrito/agregar}" method="post" class="inline-form" style="flex:1">
+                            <input type="hidden" name="productoId" th:value="${p.id}">
+                            <input type="hidden" name="cantidad" value="1">
+                            <input type="hidden" name="volver" th:value="'/tienda/' + ${tienda.id}">
+                            <button type="submit" class="btn-cart"
+                                    th:classappend="'btn-estilo-' + ${cfg.estiloBotonCompra}"
+                                    th:disabled="${p.stock <= 0}">
+                                <i class="fas fa-bag-shopping"></i>
+                                <span th:text="${p.stock > 0 ? cfg.textoBotonCompra : 'Agotado'}">Agregar</span>
+                            </button>
+                        </form>
+                        <a class="btn-ficha" th:href="@{/cliente/producto/{id}(id=${p.id})}">Ficha y reseñas</a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── SECCIÓN: INFORMACIÓN DE LA TIENDA / HISTORIA Y POLÍTICAS ── -->
+        <section class="store-section" th:if="${sec.id == 'historia' and ((cfg.historiaTienda != null and !cfg.historiaTienda.isBlank()) or (cfg.politicaEnvios != null and !cfg.politicaEnvios.isBlank()))}" id="seccion-historia">
+            <div class="store-sec-head">
+                <div>
+                    <h2 th:text="${sec.titulo}">Sobre nuestra tienda</h2>
+                    <p th:if="${sec.subtitulo != null and !sec.subtitulo.isBlank()}" th:text="${sec.subtitulo}"></p>
+                </div>
+            </div>
+            <div class="story-grid">
+                <div class="story-box">
+                    <h3><i class="fas fa-store"></i> Nuestra historia y propuesta</h3>
+                    <p th:text="${cfg.historiaTienda != null and !cfg.historiaTienda.isBlank() ? cfg.historiaTienda : cfg.descripcion}"></p>
+                </div>
+                <div class="story-box">
+                    <h3><i class="fas fa-truck-fast"></i> Envíos y garantías</h3>
+                    <p th:if="${cfg.politicaEnvios != null and !cfg.politicaEnvios.isBlank()}"
+                       th:text="${cfg.politicaEnvios}" style="margin-bottom:12px"></p>
+                    <p th:if="${cfg.politicaDevoluciones != null and !cfg.politicaDevoluciones.isBlank()}"
+                       th:text="${cfg.politicaDevoluciones}"></p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── SECCIÓN: GALERÍA DE IMÁGENES ── -->
+        <section class="store-section" th:if="${sec.id == 'galeria' and !#lists.isEmpty(cfg.rutasGaleriaPublicas)}" id="seccion-galeria">
+            <div class="store-sec-head">
+                <div>
+                    <h2 th:text="${sec.titulo}">Galería de imágenes</h2>
+                    <p th:if="${sec.subtitulo != null and !sec.subtitulo.isBlank()}" th:text="${sec.subtitulo}"></p>
+                </div>
+            </div>
+            <div class="gallery-grid">
+                <div class="gallery-item" th:each="imgUrl : ${cfg.rutasGaleriaPublicas}">
+                    <img th:src="${imgUrl}" th:alt="${cfg.nombre}" loading="lazy">
+                </div>
+            </div>
+        </section>
+
+        <!-- ── SECCIÓN: TESTIMONIOS Y RESEÑAS ── -->
+        <section class="store-section" th:if="${sec.id == 'testimonios' and (!#lists.isEmpty(resenasTienda) or !#lists.isEmpty(cfg.testimonios))}" id="seccion-testimonios">
+            <div class="store-sec-head">
+                <div>
+                    <h2 th:text="${sec.titulo}">Testimonios y reseñas</h2>
+                    <p th:if="${sec.subtitulo != null and !sec.subtitulo.isBlank()}" th:text="${sec.subtitulo}"></p>
+                </div>
+            </div>
+            <div class="testimonials-grid">
+                <div class="testimonial-card" th:each="r : ${resenasTienda}">
+                    <div class="testimonial-stars">
+                        <i th:each="i : ${#numbers.sequence(1, 5)}"
+                           th:class="${i <= r.calificacion} ? 'fas fa-star' : 'far fa-star'"></i>
+                    </div>
+                    <p class="testimonial-text" th:text="'“' + ${r.comentario} + '”'">Comentario</p>
+                    <div class="testimonial-author"
+                         th:text="${r.usuario.nombre} + ' · ' + ${r.producto.nombre}">Cliente</div>
+                </div>
+                <div class="testimonial-card" th:each="t : ${cfg.testimonios}">
+                    <div class="testimonial-stars">
+                        <i th:each="i : ${#numbers.sequence(1, 5)}"
+                           th:class="${i <= t.calificacion} ? 'fas fa-star' : 'far fa-star'"></i>
+                    </div>
+                    <p class="testimonial-text" th:text="'“' + ${t.comentario} + '”'">Testimonio</p>
+                    <div class="testimonial-author" th:text="${t.autor}">Cliente</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ── SECCIÓN: INFORMACIÓN DE CONTACTO Y REDES ── -->
+        <section class="store-section" th:if="${sec.id == 'contacto'}" id="seccion-contacto">
+            <div class="store-sec-head">
+                <div>
+                    <h2 th:text="${sec.titulo}">Información de contacto</h2>
+                    <p th:if="${sec.subtitulo != null and !sec.subtitulo.isBlank()}" th:text="${sec.subtitulo}"></p>
+                </div>
+            </div>
+            <div class="contact-grid">
+                <div class="contact-card">
+                    <h4><i class="fas fa-location-dot"></i> Ubicación y horarios</h4>
+                    <p th:if="${cfg.ciudad != null and !cfg.ciudad.isBlank()}">
+                        <strong>Ciudad:</strong> <span th:text="${cfg.ciudad}"></span>
+                    </p>
+                    <p th:if="${cfg.horarioAtencion != null and !cfg.horarioAtencion.isBlank()}" style="margin-top:6px">
+                        <strong>Horario:</strong> <span th:text="${cfg.horarioAtencion}"></span>
+                    </p>
+                </div>
+                <div class="contact-card">
+                    <h4><i class="fas fa-headset"></i> Atención directa</h4>
+                    <p th:if="${cfg.telefonoContacto != null and !cfg.telefonoContacto.isBlank()}">
+                        <strong>Teléfono:</strong> <span th:text="${cfg.telefonoContacto}"></span>
+                    </p>
+                    <p th:if="${cfg.correoContacto != null and !cfg.correoContacto.isBlank()}" style="margin-top:6px">
+                        <strong>Correo:</strong> <span th:text="${cfg.correoContacto}"></span>
+                    </p>
+                    <div class="social-pill-row">
+                        <a th:if="${rolAutenticado == null or rolAutenticado == 'cliente'}"
+                           th:href="@{/chat/iniciar(tiendaId=${tienda.id})}" class="social-pill">
+                            <i class="far fa-comment-dots"></i> Chat Caboré
+                        </a>
+                        <a th:if="${!#strings.isEmpty(cfg.whatsappDigitos)}"
+                           th:href="'https://wa.me/' + ${cfg.whatsappDigitos}" target="_blank" rel="noopener" class="social-pill">
+                            <i class="fab fa-whatsapp"></i> WhatsApp
+                        </a>
+                    </div>
+                </div>
+                <div class="contact-card">
+                    <h4><i class="fas fa-share-nodes"></i> Redes oficiales</h4>
+                    <div class="social-pill-row">
+                        <a th:if="${!#strings.isEmpty(cfg.instagramLimpio)}"
+                           th:href="'https://instagram.com/' + ${cfg.instagramLimpio}" target="_blank" rel="noopener" class="social-pill">
+                            <i class="fab fa-instagram"></i> @<span th:text="${cfg.instagramLimpio}"></span>
+                        </a>
+                        <a th:if="${cfg.facebook != null and !cfg.facebook.isBlank()}"
+                           th:href="${cfg.facebook.startsWith('http') ? cfg.facebook : 'https://facebook.com/' + cfg.facebook}"
+                           target="_blank" rel="noopener" class="social-pill">
+                            <i class="fab fa-facebook"></i> Facebook
+                        </a>
+                        <a th:if="${!#strings.isEmpty(cfg.tiktokLimpio)}"
+                           th:href="'https://tiktok.com/@' + ${cfg.tiktokLimpio}" target="_blank" rel="noopener" class="social-pill">
+                            <i class="fab fa-tiktok"></i> TikTok
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </th:block>
+</main>
+
+<!-- ══════════════════════ PIE DE PÁGINA PERSONALIZABLE ══════════════════════ -->
+<footer class="store-footer">
+    <div class="store-footer-inner"
+         th:style="${cfg.estiloPie == 'minimalista'} ? 'justify-content:center;text-align:center' : ''">
+        <div>
+            <strong style="font-family:var(--custom-font-head,serif);font-size:1.15rem" th:text="${cfg.nombre}">Tienda</strong>
+            <p style="font-size:.82rem;opacity:.75;margin-top:4px"
+               th:if="${cfg.estiloPie != 'minimalista'}"
+               th:text="${cfg.eslogan != null and !cfg.eslogan.isBlank() ? cfg.eslogan : 'Tienda oficial en Caboré Marketplace'}"></p>
+        </div>
+        <div style="font-size:.8rem;opacity:.7">
+            © 2026 <span th:text="${cfg.nombre}">Tienda</span> · Impulsado por <strong>Caboré</strong>
+        </div>
+    </div>
+</footer>
 </body>
 </html>

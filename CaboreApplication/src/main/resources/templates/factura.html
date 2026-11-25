@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="'Factura ' + ${pedido.numeroFactura} + ' — Caboré'">Factura</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" th:href="@{/CSS/cliente.css}">
+    <style>
+        .fact-sheet { max-width: 860px; margin: 26px auto 60px; background: var(--surface);
+                      border: 1px solid var(--border); border-radius: var(--radius);
+                      box-shadow: var(--shadow); padding: 40px 44px; }
+        .fact-top { display:flex; justify-content:space-between; align-items:flex-start;
+                    border-bottom: 3px solid var(--gold); padding-bottom: 18px; margin-bottom: 22px; }
+        .fact-brand { font-family: var(--font-head); font-size: 2rem; color: var(--gold-dk); }
+        .fact-brand small { display:block; font-family: var(--font-body); font-size:.75rem; color: var(--muted);
+                            letter-spacing:.14em; text-transform:uppercase; }
+        .fact-num { text-align:right; }
+        .fact-num h2 { font-family: var(--font-head); font-size: 1.25rem; margin-bottom: 2px; }
+        .fact-num p { font-size: .8rem; color: var(--muted); }
+        .fact-parties { display:grid; grid-template-columns:1fr 1fr; gap:22px; margin-bottom: 22px; }
+        .fact-party h4 { font-size:.72rem; text-transform:uppercase; letter-spacing:.1em; color:var(--muted); margin-bottom:6px; }
+        .fact-party p { font-size:.9rem; line-height:1.5; margin:0; }
+        table.fact-tbl { width:100%; border-collapse:collapse; margin-bottom: 18px; }
+        .fact-tbl th { text-align:left; font-size:.72rem; text-transform:uppercase; letter-spacing:.08em;
+                       color:var(--muted); border-bottom:2px solid var(--border); padding:8px 6px; }
+        .fact-tbl td { padding:10px 6px; border-bottom:1px solid var(--border); font-size:.9rem; vertical-align:top; }
+        .fact-tbl .num { text-align:right; white-space:nowrap; }
+        .fact-total-row { display:flex; justify-content:flex-end; }
+        .fact-total { min-width: 280px; }
+        .fact-total .line { display:flex; justify-content:space-between; padding:6px 0; font-size:.9rem; color:var(--muted); }
+        .fact-total .grand { display:flex; justify-content:space-between; padding:12px 0 4px;
+                             border-top:2px solid var(--gold); font-size:1.2rem; font-weight:700; color:var(--text); }
+        .fact-foot { margin-top: 26px; padding-top: 14px; border-top:1px dashed var(--border);
+                     font-size:.78rem; color:var(--muted); line-height:1.6; }
+        .fact-actions { max-width:860px; margin: 0 auto; display:flex; gap:12px; }
+        @media print {
+            .bg-grid, .bg-glow, .navbar, .fact-actions, .flash { display:none !important; }
+            body { background:#fff; }
+            .fact-sheet { box-shadow:none; border:none; margin:0; padding: 10mm 12mm; max-width:none; }
+            .estado-badge { border:1px solid currentColor; }
+        }
+    </style>
+</head>
+<body>
+<div class="bg-grid"></div>
+
+<main class="page">
+    <div class="fact-actions no-print">
+        <a th:href="${volverUrl != null} ? ${volverUrl} : @{/cliente/pedido/{id}(id=${pedido.id})}"
+           class="back-link" style="align-self:center"
+           th:text="${volverTexto != null} ? ${volverTexto} : '← Volver al pedido'">← Volver al pedido</a>
+        <span style="flex:1"></span>
+        <button class="price-apply" onclick="window.print()"><i class="fas fa-print"></i> Imprimir / Guardar PDF</button>
+    </div>
+
+    <article class="fact-sheet">
+        <div class="fact-top">
+            <div class="fact-brand">Caboré<small>Marketplace de emprendedores</small></div>
+            <div class="fact-num">
+                <h2>FACTURA <span th:text="${pedido.numeroFactura}">FAC-000000</span></h2>
+                <p th:text="'Pedido #' + ${pedido.id}"></p>
+                <p th:text="'Emitida: ' + ${#temporals.format(pedido.creadoEn, 'dd/MM/yyyy HH:mm')}"></p>
+                <p class="estado-badge" th:classappend="'estado-' + ${pedido.estado.name()}"
+                   style="display:inline-block;margin-top:6px" th:text="${pedido.estado.etiqueta()}"></p>
+            </div>
+        </div>
+
+        <div class="fact-parties">
+            <div class="fact-party">
+                <h4>Facturar a</h4>
+                <p><strong th:text="${pedido.usuario.nombre}">Cliente</strong></p>
+                <p th:text="${pedido.usuario.correo}">correo</p>
+                <p th:if="${pedido.usuario.telefono}" th:text="'Tel: ' + ${pedido.usuario.telefono}"></p>
+                <p th:if="${pedido.direccion}" th:text="'Dirección: ' + ${pedido.direccion}"></p>
+            </div>
+            <div class="fact-party">
+                <h4>Modalidad de pago</h4>
+                <p><strong>Pago contra entrega</strong></p>
+                <p>La entrega la coordinan las tiendas con el cliente por el canal de contacto registrado.</p>
+                <p th:if="${pedido.telefonoContacto}" th:text="'Contacto entrega: ' + ${pedido.telefonoContacto}"></p>
+            </div>
+        </div>
+
+        <table class="fact-tbl">
+            <thead>
+            <tr>
+                <th>#</th><th>Producto</th><th>Tienda</th>
+                <th class="num">Cant.</th><th class="num">V. unitario</th><th class="num">Importe</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="i, iTERS : ${pedido.items}">
+                <td th:text="${iTERS.count}">1</td>
+                <td th:text="${i.producto.nombre}">Producto</td>
+                <td th:text="${i.producto.tienda != null} ? ${i.producto.tienda.nombre} : '—'">Tienda</td>
+                <td class="num" th:text="${i.cantidad}">1</td>
+                <td class="num" th:text="'$' + ${#numbers.formatDecimal(i.precioEfectivo, 1, 'POINT', 0, 'COMMA')}">$0</td>
+                <td class="num" th:text="'$' + ${#numbers.formatDecimal(i.subtotalEfectivo, 1, 'POINT', 0, 'COMMA')}">$0</td>
+            </tr>
+            </tbody>
+        </table>
+
+        <div class="fact-total-row">
+            <div class="fact-total">
+                <div class="line"><span>Subtotal</span>
+                    <span th:text="'$' + ${#numbers.formatDecimal(pedido.total, 1, 'POINT', 0, 'COMMA')}">$0</span></div>
+                <div class="line"><span>Envío</span><span>A acordar con las tiendas</span></div>
+                <div class="grand"><span>TOTAL</span>
+                    <span th:text="'$' + ${#numbers.formatDecimal(pedido.total, 1, 'POINT', 0, 'COMMA')}">$0</span></div>
+            </div>
+        </div>
+
+        <div class="fact-foot">
+            <p th:if="${pedido.notas != null and !pedido.notas.isBlank()}" th:text="'Notas del pedido: ' + ${pedido.notas}"></p>
+            <p>Documento generado por Caboré con la información registrada del pedido.
+                Los precios son de lista al momento de la compra (COP).
+                Si detectas algún error en tu factura, contacta a la tienda o al administrador de la plataforma.</p>
+        </div>
+    </article>
+</main>
+</body>
+</html>

@@ -1,13 +1,8 @@
 package co.cabore.CaboreApplication.controller;
 
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-
-@Controller
+/**
+ * Controlador temporal original: el endpoint /admin ahora es atendido por
+ * AdminController con todas las funcionalidades del módulo administrador.
+ */
 public class PanelesTemporalesController {
-
-    @GetMapping("/admin")
-    public String admin() {
-        return "admin";
-    }
 }

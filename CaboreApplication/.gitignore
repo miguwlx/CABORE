@@ -31,3 +31,14 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Secretos / configuración local (NUNCA subir a git) ###
+.env
+.env.*
+!.env.example
+application-local.properties
+application-local.yml
+*.pem
+*.key
+*.jks
+*.p12

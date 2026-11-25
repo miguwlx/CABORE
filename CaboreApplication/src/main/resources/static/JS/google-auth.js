@@ -1,14 +1,51 @@
 /* ==========================================================
    google-auth.js — Registro / inicio de sesión con Google
-   Caboré. Archivo independiente.
+   Caboré. Archivo independiente (migrado a Spring Boot).
    ========================================================== */
-function handleGoogleCredential(response) {
-    const rolInput = document.querySelector('input[name="rol"]:checked');
-    const rol = rolInput ? rolInput.value : 'cliente';
+function mostrarErrorGoogle(msg) {
+    const panelEmp = document.getElementById('panel-emprendedor');
+    const esEmp = panelEmp && panelEmp.classList.contains('active');
+    const boxLogin = document.getElementById(esEmp ? 'err-emprendedor' : 'err-cliente');
+    if (boxLogin) {
+        boxLogin.innerHTML = '⚠️&nbsp; ' + msg;
+        boxLogin.classList.add('visible');
+        return;
+    }
+    const boxReg = document.getElementById('err-registro');
+    if (boxReg) {
+        boxReg.textContent = msg;
+        boxReg.style.display = 'block';
+        return;
+    }
+    alert(msg);
+}
 
-    fetch('google_auth.php', {
+function handleGoogleCredential(response) {
+    if (!response || !response.credential) {
+        mostrarErrorGoogle('No se recibió la credencial de Google.');
+        return;
+    }
+
+    const rolInput = document.querySelector('input[name="rol"]:checked');
+    const panelEmp = document.getElementById('panel-emprendedor');
+    let rol = 'cliente';
+    if (rolInput) {
+        rol = rolInput.value;
+    } else if (panelEmp && panelEmp.classList.contains('active')) {
+        rol = 'emprendedor';
+    }
+
+    const csrfToken  = document.querySelector('meta[name="_csrf"]')?.getAttribute('content') || '';
+    const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content') || 'X-CSRF-TOKEN';
+
+    const headers = { 'Content-Type': 'application/x-www-form-urlencoded' };
+    if (csrfToken) {
+        headers[csrfHeader] = csrfToken;
+    }
+
+    fetch('/auth/google', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        headers: headers,
         body: 'credential=' + encodeURIComponent(response.credential) + '&rol=' + encodeURIComponent(rol)
     })
     .then(r => r.json())
@@ -16,8 +53,8 @@ function handleGoogleCredential(response) {
         if (data.ok) {
             window.location.href = data.redirect;
         } else {
-            alert(data.error || 'No se pudo continuar con Google.');
+            mostrarErrorGoogle(data.error || 'No se pudo continuar con Google.');
         }
     })
-    .catch(() => alert('Error de conexión con Google.'));
+    .catch(() => mostrarErrorGoogle('Error de conexión al verificar con Google.'));
 }

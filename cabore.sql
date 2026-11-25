@@ -493,6 +493,28 @@ ALTER TABLE `tiendas`
   ADD CONSTRAINT `fk_tienda_usuario` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE;
 COMMIT;
 
+-- --------------------------------------------------------
+--
+-- Estructura de tabla para la tabla `carrito_items` (carrito persistente de la
+-- aplicación Spring Boot). Es idempotente (IF NOT EXISTS): en bases que ya la
+-- tienen no hace nada. La aplicación también ejecuta
+-- CaboreApplication/src/main/resources/db/fase3-carrito.sql al arrancar, que crea
+-- la misma tabla sin claves foráneas para no interferir con bases ya existentes.
+--
+CREATE TABLE IF NOT EXISTS `carrito_items` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `usuario_id` int(11) NOT NULL,
+  `producto_id` int(11) NOT NULL,
+  `cantidad` int(11) NOT NULL DEFAULT 1,
+  `agregado_en` datetime NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_carrito_usuario_producto` (`usuario_id`,`producto_id`),
+  KEY `idx_carrito_usuario` (`usuario_id`),
+  KEY `fk_carrito_producto` (`producto_id`),
+  CONSTRAINT `fk_carrito_usuario` FOREIGN KEY (`usuario_id`) REFERENCES `usuarios` (`id`) ON DELETE CASCADE,
+  CONSTRAINT `fk_carrito_producto` FOREIGN KEY (`producto_id`) REFERENCES `productos` (`id`) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;

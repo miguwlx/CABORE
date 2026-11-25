@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi carrito — Caboré</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" th:href="@{/CSS/cliente.css}">
+</head>
+<body>
+<div class="bg-grid"></div>
+<div class="bg-glow a"></div>
+<div class="bg-glow b"></div>
+
+<nav th:replace="~{fragments/cliente-nav :: navbar}"></nav>
+
+<main class="page">
+    <div class="flash ok" th:if="${flashOk}"><i class="fas fa-check-circle"></i> <span th:text="${flashOk}"></span></div>
+    <div class="flash err" th:if="${flashErr}"><i class="fas fa-exclamation-circle"></i> <span th:text="${flashErr}"></span></div>
+    <div class="flash err" th:if="${resumen.ajustado()}">
+        <i class="fas fa-triangle-exclamation"></i> Ajustamos tu carrito: algún producto cambió de stock o ya no está disponible.
+    </div>
+
+    <div class="section-header">
+        <h2><i class="fas fa-shopping-bag"></i> Mi carrito</h2>
+        <span th:text="${resumen.count()} + (${resumen.count() == 1 ? ' producto' : ' productos'})">0 productos</span>
+    </div>
+
+    <!-- Carrito vacío -->
+    <div class="empty" th:if="${#lists.isEmpty(items)}">
+        <i class="fas fa-shopping-bag"></i>
+        <h3>Tu carrito está vacío</h3>
+        <p>Agrega productos desde el catálogo para comenzar tu compra.</p>
+        <a class="price-apply browse-btn" th:href="@{/cliente}">Explorar productos</a>
+    </div>
+
+    <div class="cart-page-cols" th:unless="${#lists.isEmpty(items)}">
+        <div class="cart-page-list">
+            <div class="cart-item page-row" th:each="it : ${items}">
+                <img th:if="${it.imagen() != null}" th:src="${it.imagen()}" th:alt="${it.nombre()}">
+                <div class="cart-item-noimg" th:unless="${it.imagen() != null}"><i class="fas fa-box-open"></i></div>
+                <div class="cart-item-info">
+                    <div class="cart-item-name" th:text="${it.nombre()}">Producto</div>
+                    <div class="cart-item-store">
+                        <span th:text="${it.tienda()}">Tienda</span> ·
+                        <span th:text="'$' + ${#numbers.formatDecimal(it.precioUnit(), 1, 'POINT', 0, 'COMMA')} + ' c/u'">$0</span> ·
+                        <span class="stock-note" th:text="'Stock disponible: ' + ${it.stock()}"></span>
+                    </div>
+                    <div class="cart-item-controls">
+                        <form th:action="@{/cliente/carrito/ajustar}" method="post" class="inline-form qty-controls">
+                            <input type="hidden" name="productoId" th:value="${it.productoId()}">
+                            <button class="qty-btn" type="button" th:attr="data-max=${it.stock()}"
+                                    onclick="step(this,-1)">−</button>
+                            <input class="qty-input" type="number" name="cantidad" min="1" th:max="${it.stock()}" th:value="${it.cantidad()}">
+                            <button class="qty-btn" type="button" th:attr="data-max=${it.stock()}"
+                                    onclick="step(this,1)">+</button>
+                            <button class="price-apply tiny" type="submit">Actualizar</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="cart-item-right">
+                    <div class="cart-item-price" th:text="'$' + ${#numbers.formatDecimal(it.subtotal(), 1, 'POINT', 0, 'COMMA')}">$0</div>
+                    <form th:action="@{/cliente/carrito/eliminar}" method="post" class="inline-form">
+                        <input type="hidden" name="productoId" th:value="${it.productoId()}">
+                        <button class="cart-item-del" type="submit" title="Quitar del carrito"><i class="fas fa-trash"></i> Quitar</button>
+                    </form>
+                </div>
+            </div>
+
+            <form th:action="@{/cliente/carrito/vaciar}" method="post" class="inline-form">
+                <button class="link-danger" type="submit" onclick="return confirm('¿Vaciar todo el carrito?')">
+                    <i class="fas fa-trash-can"></i> Vaciar carrito
+                </button>
+            </form>
+        </div>
+
+        <aside class="cart-page-summary">
+            <h3>Resumen</h3>
+            <div class="summary-line">
+                <span>Productos</span><span th:text="${resumen.count()}">0</span>
+            </div>
+            <div class="summary-line">
+                <span>Envío</span><span class="free-tag">Por confirmar con la tienda</span>
+            </div>
+            <div class="cart-total-row">
+                <span class="cart-total-label">Total</span>
+                <span class="cart-total-val" th:text="'$' + ${#numbers.formatDecimal(resumen.total(), 1, 'POINT', 0, 'COMMA')}">$0</span>
+            </div>
+            <a class="btn-checkout" th:href="@{/cliente/checkout}"><i class="fas fa-credit-card"></i> Finalizar compra</a>
+            <a class="continue-shopping" th:href="@{/cliente}">← Seguir comprando</a>
+        </aside>
+    </div>
+</main>
+
+<script>
+/* Ajusta visualmente el input de cantidad; el servidor revalida el límite real. */
+function step(btn, delta) {
+    const form = btn.closest('form');
+    const input = form.querySelector('input[name="cantidad"]');
+    const max = parseInt(btn.dataset.max || input.max || '99', 10);
+    let v = (parseInt(input.value, 10) || 1) + delta;
+    if (v < 1) v = 1;
+    if (v > max) v = max;
+    input.value = v;
+}
+</script>
+</body>
+</html>

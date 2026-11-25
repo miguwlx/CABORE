@@ -1,28 +1,514 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Catálogo - Caboré</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catálogo — Caboré</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" th:href="@{/CSS/cliente.css}">
+    <meta name="_csrf" th:content="${_csrf.token}">
+    <meta name="_csrf_header" th:content="${_csrf.headerName}">
 </head>
 <body>
-    <header>
-        <h1>Catálogo de Productos</h1>
-        <a th:href="@{/logout}">Cerrar Sesión</a>
-    </header>
-    <main>
-        <h2>Explora tiendas y emprendimientos</h2>
+<div class="bg-grid"></div>
+<div class="bg-glow a"></div>
+<div class="bg-glow b"></div>
 
-        <p th:if="${#lists.isEmpty(tiendas)}">
-            Todavía no hay tiendas activas. Vuelve pronto.
-        </p>
-
-        <div th:each="t : ${tiendas}" style="border:1px solid #ddd; padding:16px; margin-bottom:12px; border-radius:8px;">
-            <h3 th:text="${t.nombre}">Nombre de la tienda</h3>
-            <p th:text="${t.descripcion}">Descripción</p>
-            <p th:if="${t.ciudad}" th:text="'Ciudad: ' + ${t.ciudad}"></p>
-            <a th:href="@{/tienda/{id}(id=${t.id})}">Ver tienda →</a>
+<!-- ── Navbar ──────────────────────────────────────────────── -->
+<nav class="navbar">
+    <a th:href="@{/cliente}" class="nav-logo">Caboré</a>
+    <form class="nav-search" method="get" th:action="@{/cliente}">
+        <input type="hidden" name="categoria" th:if="${f.categoriaId() != null}" th:value="${f.categoriaId()}">
+        <input type="hidden" name="oferta" th:if="${f.oferta()}" value="1">
+        <i class="fas fa-search"></i>
+        <input type="text" name="q" placeholder="Buscar productos o tiendas…" th:value="${f.q()}" autocomplete="off">
+    </form>
+    <div class="nav-actions">
+        <a class="nav-btn" th:href="@{/chat}" title="Mensajes">
+            <i class="far fa-comment-dots"></i>
+            <span class="cart-badge" th:if="${mensajesNoLeidosCount != null and mensajesNoLeidosCount > 0}"
+                  th:text="${mensajesNoLeidosCount}">0</span>
+        </a>
+        <a class="nav-btn" th:href="@{/cliente/favoritos}" title="Favoritos">
+            <i class="far fa-heart"></i>
+            <span class="cart-badge" id="fav-badge"
+                  th:text="${favoritosCount != null ? favoritosCount : 0}"
+                  th:style="${favoritosCount != null and favoritosCount > 0} ? 'background:#ff4d6d' : 'display:none;background:#ff4d6d'">0</span>
+        </a>
+        <button class="nav-btn" title="Carrito" onclick="openCart()">
+            <i class="fas fa-shopping-bag"></i>
+            <span class="cart-badge" id="cart-badge" th:text="${carritoCount}"
+                  th:style="${carritoCount > 0} ? '' : 'display:none'">0</span>
+        </button>
+        <div class="nav-user">
+            <div class="nav-avatar" title="Mi cuenta" th:text="${usuarioInicial}">C</div>
+            <div class="nav-dropdown">
+                <a th:href="@{/cliente/perfil}"><i class="far fa-user"></i> <span th:text="${usuarioNombre}">Cliente</span></a>
+                <a th:href="@{/cliente/perfil}"><i class="fas fa-map-marker-alt"></i> Mi perfil y dirección</a>
+                <a th:href="@{/cliente/pedidos}"><i class="fas fa-box"></i> Mis pedidos</a>
+                <a th:href="@{/chat}" style="justify-content:space-between">
+                    <span><i class="far fa-comment-dots"></i> Mensajes</span>
+                    <span th:if="${mensajesNoLeidosCount != null and mensajesNoLeidosCount > 0}"
+                          th:text="${mensajesNoLeidosCount}"
+                          style="background:var(--accent);color:#fff;font-size:11px;font-weight:700;border-radius:20px;min-width:18px;height:18px;display:inline-flex;align-items:center;justify-content:center;padding:0 5px">0</span>
+                </a>
+                <a th:href="@{/cliente/favoritos}"><i class="far fa-heart"></i> Favoritos</a>
+                <a th:href="@{/cliente/carrito}"><i class="fas fa-shopping-bag"></i> Mi carrito</a>
+                <hr>
+                <form th:action="@{/logout}" method="post" class="nav-logout-form">
+                    <button type="submit" class="danger nav-logout"><i class="fas fa-sign-out-alt"></i> Cerrar sesión</button>
+                </form>
+            </div>
         </div>
+    </div>
+</nav>
+
+<!-- ── Layout ──────────────────────────────────────────────── -->
+<div class="layout">
+    <!-- Sidebar filtros -->
+    <aside class="sidebar">
+        <form method="get" th:action="@{/cliente}" id="filter-form">
+            <input type="hidden" name="q" th:if="${f.q() != null and !f.q().isBlank()}" th:value="${f.q()}">
+            <input type="hidden" name="categoria" th:if="${f.categoriaId() != null}" th:value="${f.categoriaId()}">
+            <div class="filter-group">
+                <div class="sidebar-title">Categorías</div>
+                <ul class="cat-list">
+                    <li>
+                        <a th:href="@{/cliente(q=${f.q()}, tienda=${f.tiendaId()}, oferta=${f.oferta()} ? 1 : null, disponible=${f.disponible()} ? 1 : null, min=${f.minPrecio()}, max=${f.maxPrecio()}, orden=${f.orden()})}"
+                           th:classappend="${f.categoriaId() == null} ? 'active'">
+                            Todas <span></span>
+                        </a>
+                    </li>
+                    <li th:each="c : ${categorias}">
+                        <a th:href="@{/cliente(q=${f.q()}, categoria=${c.id}, tienda=${f.tiendaId()}, oferta=${f.oferta()} ? 1 : null, disponible=${f.disponible()} ? 1 : null, min=${f.minPrecio()}, max=${f.maxPrecio()}, orden=${f.orden()})}"
+                           th:classappend="${f.categoriaId() != null and f.categoriaId() == c.id} ? 'active'"
+                           th:text="${c.iconoSeguro} + ' ' + ${c.nombre}">Categoría</a>
+                    </li>
+                </ul>
+            </div>
+            <div class="filter-group" th:if="${!#lists.isEmpty(tiendas)}">
+                <div class="sidebar-title">Tienda</div>
+                <select class="order-select" name="tienda" onchange="document.getElementById('filter-form').submit()">
+                    <option value="">Todas las tiendas</option>
+                    <option th:each="t : ${tiendas}"
+                            th:value="${t.id}"
+                            th:selected="${f.tiendaId() != null and f.tiendaId() == t.id}"
+                            th:text="${t.nombre}">Tienda</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <div class="sidebar-title">Filtrar por</div>
+                <label class="filter-row" th:classappend="${f.oferta()} ? 'active'">
+                    <span><i class="fas fa-tag" style="margin-right:6px"></i>Solo en oferta</span>
+                    <input type="checkbox" name="oferta" value="1" th:checked="${f.oferta()}" onchange="document.getElementById('filter-form').submit()">
+                </label>
+                <label class="filter-row" th:classappend="${f.disponible()} ? 'active'">
+                    <span><i class="fas fa-circle-check" style="margin-right:6px"></i>Solo disponibles</span>
+                    <input type="checkbox" name="disponible" value="1" th:checked="${f.disponible()}" onchange="document.getElementById('filter-form').submit()">
+                </label>
+            </div>
+            <div class="filter-group">
+                <div class="sidebar-title">Rango de precio</div>
+                <div class="price-row">
+                    <input class="order-select price-in" type="number" name="min" min="0" placeholder="Mín" th:value="${f.minPrecio()}">
+                    <span class="price-sep">—</span>
+                    <input class="order-select price-in" type="number" name="max" min="0" placeholder="Máx" th:value="${f.maxPrecio()}">
+                </div>
+                <button type="submit" class="price-apply">Aplicar rango</button>
+            </div>
+            <div class="filter-group">
+                <div class="sidebar-title">Ordenar por</div>
+                <select class="order-select" name="orden" onchange="document.getElementById('filter-form').submit()">
+                    <option value="reciente"    th:selected="${f.orden() == 'reciente'}">Más recientes</option>
+                    <option value="precio_asc"  th:selected="${f.orden() == 'precio_asc'}">Precio: menor a mayor</option>
+                    <option value="precio_desc" th:selected="${f.orden() == 'precio_desc'}">Precio: mayor a menor</option>
+                    <option value="nombre"      th:selected="${f.orden() == 'nombre'}">Nombre A–Z</option>
+                </select>
+            </div>
+            <a th:if="${vigentes.activos()}" th:href="@{/cliente}" class="reset-filters">✕ Limpiar filtros</a>
+        </form>
+    </aside>
+
+    <!-- Main content -->
+    <main class="main">
+        <div class="flash ok" th:if="${flashOk}"><i class="fas fa-check-circle"></i> <span th:text="${flashOk}"></span></div>
+        <div class="flash err" th:if="${flashErr}"><i class="fas fa-exclamation-circle"></i> <span th:text="${flashErr}"></span></div>
+
+        <!-- Sugerencias destacadas (solo cuando no hay búsqueda o filtros activos) -->
+        <th:block th:if="${!#lists.isEmpty(destacados)}">
+            <div class="section-header"><h2>✨ Destacados para ti</h2></div>
+            <div class="highlights">
+                <div class="prod-card" th:each="s : ${destacados}"
+                     th:data-id="${s.id}" th:data-nombre="${s.nombre}" th:data-precio="${s.precioActual}"
+                     th:data-precio-txt="${#numbers.formatDecimal(s.precioActual, 1, 'POINT', 0, 'COMMA')}"
+                     th:data-oferta="${s.tieneOferta} ? '1' : '0'"
+                     th:data-precio-regular="${s.tieneOferta} ? ${#numbers.formatDecimal(s.precio, 1, 'POINT', 0, 'COMMA')} : ''"
+                     th:data-img="${s.rutaImagen}" th:data-tienda="${s.tienda.nombre}" th:data-tienda-id="${s.tienda.id}"
+                     th:data-cat="${cats != null and s.categoriaId != null} ? ${cats.get(s.categoriaId)} : ''"
+                     th:data-desc="${s.descripcion}" th:data-stock="${s.stock}" th:data-wa="${s.tienda.whatsapp}"
+                     onclick="openModal(this)">
+                    <div class="prod-img-wrap">
+                        <img th:if="${s.rutaImagen != null}" th:src="${s.rutaImagen}" th:alt="${s.nombre}" loading="lazy">
+                        <div class="no-img" th:unless="${s.rutaImagen != null}"><i class="fas fa-box-open"></i></div>
+                        <span class="badge-destacado"><i class="fas fa-star"></i> Top</span>
+                        <button class="fav-btn" th:classappend="${favoritosIds.contains(s.id)} ? 'active'"
+                                th:data-id="${s.id}" onclick="event.stopPropagation(); toggleFav(this)">
+                            <i th:class="${favoritosIds.contains(s.id)} ? 'fas fa-heart' : 'far fa-heart'"></i>
+                        </button>
+                    </div>
+                    <div class="prod-body">
+                        <a class="prod-store" th:href="@{/tienda/{id}(id=${s.tienda.id})}" onclick="event.stopPropagation()"
+                           th:title="'Ver tienda ' + ${s.tienda.nombre}">
+                            <span class="prod-store-dot" th:style="'background:' + (${s.tienda.color} ?: '#888')"></span>
+                            <span th:text="${s.tienda.nombre}">Tienda</span>
+                        </a>
+                        <div class="prod-name" th:text="${s.nombre}">Producto</div>
+                        <div class="prod-price-row">
+                            <span class="prod-price" th:classappend="${s.tieneOferta} ? 'oferta'"
+                                  th:text="'$' + ${#numbers.formatDecimal(s.precioActual, 1, 'POINT', 0, 'COMMA')}">$0</span>
+                            <span class="prod-price-old" th:if="${s.tieneOferta}"
+                                  th:text="'$' + ${#numbers.formatDecimal(s.precio, 1, 'POINT', 0, 'COMMA')}">$0</span>
+                        </div>
+                    </div>
+                    <div class="prod-footer">
+                        <button class="btn-cart" th:data-id="${s.id}" th:data-nombre="${s.nombre}"
+                                onclick="event.stopPropagation(); addToCart(this.dataset.id, this.dataset.nombre)">
+                            <i class="fas fa-bag-shopping"></i> Agregar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </th:block>
+
+        <!-- Catálogo principal -->
+        <div class="section-header">
+            <h2 th:text="${tituloCatalogo}">Todos los productos</h2>
+            <span th:text="${page.totalElements} + ' producto' + (${page.totalElements} != 1 ? 's' : '')">0 productos</span>
+        </div>
+
+        <!-- Chips de filtros activos -->
+        <div class="active-filters-bar" th:if="${vigentes.activos()}">
+            <a th:if="${f.q() != null and !f.q().isBlank()}" class="filter-chip"
+               th:href="@{/cliente(categoria=${f.categoriaId()}, tienda=${f.tiendaId()}, oferta=${f.oferta()} ? 1 : null, disponible=${f.disponible()} ? 1 : null, min=${f.minPrecio()}, max=${f.maxPrecio()}, orden=${f.orden()})}">
+                <i class="fas fa-search"></i> <span th:text="'“' + ${f.q()} + '”'"></span> <span class="chip-x">✕</span>
+            </a>
+            <a th:if="${categoriaSel != null}" class="filter-chip"
+               th:href="@{/cliente(q=${f.q()}, tienda=${f.tiendaId()}, oferta=${f.oferta()} ? 1 : null, disponible=${f.disponible()} ? 1 : null, min=${f.minPrecio()}, max=${f.maxPrecio()}, orden=${f.orden()})}">
+                <span th:text="${categoriaSel.iconoSeguro + ' ' + categoriaSel.nombre}"></span> <span class="chip-x">✕</span>
+            </a>
+            <a th:if="${tiendaSel != null}" class="filter-chip"
+               th:href="@{/cliente(q=${f.q()}, categoria=${f.categoriaId()}, oferta=${f.oferta()} ? 1 : null, disponible=${f.disponible()} ? 1 : null, min=${f.minPrecio()}, max=${f.maxPrecio()}, orden=${f.orden()})}">
+                <i class="fas fa-store"></i> <span th:text="${tiendaSel.nombre}"></span> <span class="chip-x">✕</span>
+            </a>
+            <a th:if="${f.oferta()}" class="filter-chip"
+               th:href="@{/cliente(q=${f.q()}, categoria=${f.categoriaId()}, tienda=${f.tiendaId()}, disponible=${f.disponible()} ? 1 : null, min=${f.minPrecio()}, max=${f.maxPrecio()}, orden=${f.orden()})}">
+                <i class="fas fa-tag"></i> En oferta <span class="chip-x">✕</span>
+            </a>
+            <a th:if="${f.disponible()}" class="filter-chip"
+               th:href="@{/cliente(q=${f.q()}, categoria=${f.categoriaId()}, tienda=${f.tiendaId()}, oferta=${f.oferta()} ? 1 : null, min=${f.minPrecio()}, max=${f.maxPrecio()}, orden=${f.orden()})}">
+                <i class="fas fa-circle-check"></i> Disponibles <span class="chip-x">✕</span>
+            </a>
+            <a th:if="${f.minPrecio() != null or f.maxPrecio() != null}" class="filter-chip"
+               th:href="@{/cliente(q=${f.q()}, categoria=${f.categoriaId()}, tienda=${f.tiendaId()}, oferta=${f.oferta()} ? 1 : null, disponible=${f.disponible()} ? 1 : null, orden=${f.orden()})}">
+                <i class="fas fa-coins"></i>
+                <span th:text="(${f.minPrecio() != null ? '$' + #numbers.formatDecimal(f.minPrecio(), 1, 'POINT', 0, 'COMMA') : '$0'}) + ' – ' + (${f.maxPrecio() != null ? '$' + #numbers.formatDecimal(f.maxPrecio(), 1, 'POINT', 0, 'COMMA') : '∞'})"></span>
+                <span class="chip-x">✕</span>
+            </a>
+            <a th:href="@{/cliente}" class="filter-chip clear-all">Limpiar todo</a>
+        </div>
+
+        <div class="product-grid" th:if="${!#lists.isEmpty(productos)}">
+            <div class="prod-card" th:each="p : ${productos}"
+                 th:data-id="${p.id}" th:data-nombre="${p.nombre}" th:data-precio="${p.precioActual}"
+                 th:data-precio-txt="${#numbers.formatDecimal(p.precioActual, 1, 'POINT', 0, 'COMMA')}"
+                 th:data-oferta="${p.tieneOferta} ? '1' : '0'"
+                 th:data-precio-regular="${p.tieneOferta} ? ${#numbers.formatDecimal(p.precio, 1, 'POINT', 0, 'COMMA')} : ''"
+                 th:data-img="${p.rutaImagen}" th:data-tienda="${p.tienda.nombre}" th:data-tienda-id="${p.tienda.id}"
+                 th:data-cat="${cats != null and p.categoriaId != null} ? ${cats.get(p.categoriaId)} : ''"
+                 th:data-desc="${p.descripcion}" th:data-stock="${p.stock}" th:data-wa="${p.tienda.whatsapp}">
+                <div class="prod-img-wrap" onclick="openModal(this.parentElement)">
+                    <img th:if="${p.rutaImagen != null}" th:src="${p.rutaImagen}" th:alt="${p.nombre}" loading="lazy">
+                    <div class="no-img" th:unless="${p.rutaImagen != null}"><i class="fas fa-box-open"></i></div>
+                    <span class="badge-oferta" th:if="${p.tieneOferta}" th:text="'-' + ${p.descuento} + '%'">-0%</span>
+                    <button class="fav-btn" th:classappend="${favoritosIds.contains(p.id)} ? 'active'"
+                            th:data-id="${p.id}" onclick="event.stopPropagation(); toggleFav(this)">
+                        <i th:class="${favoritosIds.contains(p.id)} ? 'fas fa-heart' : 'far fa-heart'"></i>
+                    </button>
+                </div>
+                <div class="prod-body" onclick="openModal(this.parentElement)">
+                    <div class="prod-store">
+                        <span class="prod-store-dot" th:style="'background:' + (${p.tienda.color} ?: '#888')"></span>
+                        <a th:href="@{/tienda/{id}(id=${p.tienda.id})}" onclick="event.stopPropagation()" th:text="${p.tienda.nombre}">Tienda</a>
+                    </div>
+                    <div class="prod-name" th:text="${p.nombre}">Producto</div>
+                    <div class="prod-rating" th:if="${p.ratingPromedio != null and p.ratingPromedio > 0}">
+                        <th:block th:each="i : ${#numbers.sequence(1, 5)}">
+                            <i th:class="${i <= p.ratingPromedio + 0.49} ? 'fas fa-star' : 'far fa-star'"></i>
+                        </th:block>
+                        <span th:text="'(' + ${p.totalResenas} + ')'">(0)</span>
+                    </div>
+                    <div class="prod-price-row">
+                        <span class="prod-price" th:classappend="${p.tieneOferta} ? 'oferta'"
+                              th:text="'$' + ${#numbers.formatDecimal(p.precioActual, 1, 'POINT', 0, 'COMMA')}">$0</span>
+                        <span class="prod-price-old" th:if="${p.tieneOferta}"
+                              th:text="'$' + ${#numbers.formatDecimal(p.precio, 1, 'POINT', 0, 'COMMA')}">$0</span>
+                    </div>
+                </div>
+                <div class="prod-footer">
+                    <button class="btn-cart" th:data-id="${p.id}" th:data-nombre="${p.nombre}"
+                            th:disabled="${p.stock <= 0}"
+                            onclick="event.stopPropagation(); addToCart(this.dataset.id, this.dataset.nombre)">
+                        <i class="fas fa-bag-shopping"></i> <span th:text="${p.stock > 0 ? 'Agregar' : 'Agotado'}">Agregar</span>
+                    </button>
+                    <a class="btn-ficha" th:href="@{/cliente/producto/{id}(id=${p.id})}" title="Ver ficha y reseñas">Ficha</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="empty" th:if="${#lists.isEmpty(productos)}">
+            <i class="fas fa-search"></i>
+            <h3>Sin resultados</h3>
+            <p>Intenta con otra categoría o cambia los filtros.</p>
+        </div>
+
+        <!-- Paginación -->
+        <div class="pager" th:if="${page.totalPages > 1}">
+            <a th:if="${page.hasPrevious()}" class="page-btn"
+               th:href="@{/cliente(q=${f.q()}, categoria=${f.categoriaId()}, tienda=${f.tiendaId()}, oferta=${f.oferta()} ? 1 : null, disponible=${f.disponible()} ? 1 : null, min=${f.minPrecio()}, max=${f.maxPrecio()}, orden=${f.orden()}, p=${page.previousPageable().pageNumber})}">
+                ← Anterior
+            </a>
+            <span class="page-info" th:text="'Página ' + (${page.number} + 1) + ' de ' + ${page.totalPages}">Página 1</span>
+            <a th:if="${page.hasNext()}" class="page-btn"
+               th:href="@{/cliente(q=${f.q()}, categoria=${f.categoriaId()}, tienda=${f.tiendaId()}, oferta=${f.oferta()} ? 1 : null, disponible=${f.disponible()} ? 1 : null, min=${f.minPrecio()}, max=${f.maxPrecio()}, orden=${f.orden()}, p=${page.nextPageable().pageNumber})}">
+                Siguiente →
+            </a>
+        </div>
+
+        <!-- Explora tiendas (vista original del módulo) -->
+        <div class="section-header">
+            <h2>🏬 Explora tiendas y emprendimientos</h2>
+        </div>
+        <div class="store-grid" th:if="${!#lists.isEmpty(tiendas)}">
+            <a class="store-card" th:each="t : ${tiendas}" th:href="@{/tienda/{id}(id=${t.id})}">
+                <span class="store-bar" th:style="'background:' + (${t.color} ?: '#888')"></span>
+                <div class="store-body">
+                    <h3 th:text="${t.nombre}">Nombre de la tienda</h3>
+                    <p th:text="${t.descripcion}">Descripción</p>
+                    <span class="store-city" th:if="${t.ciudad}"><i class="fas fa-map-marker-alt"></i> <span th:text="${t.ciudad}"></span></span>
+                    <span class="store-link">Ver tienda →</span>
+                </div>
+            </a>
+        </div>
+        <p th:if="${#lists.isEmpty(tiendas)}" class="no-stores">Todavía no hay tiendas activas. Vuelve pronto.</p>
     </main>
+</div>
+
+<!-- ── Carrito drawer ──────────────────────────────────────── -->
+<div class="cart-overlay" id="cart-overlay" onclick="closeCart()"></div>
+<div class="cart-drawer" id="cart-drawer">
+    <div class="cart-head">
+        <h3><i class="fas fa-shopping-bag"></i> Mi carrito</h3>
+        <button onclick="closeCart()" aria-label="Cerrar"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="cart-body" id="cart-body"></div>
+    <div class="cart-foot">
+        <div class="cart-total-row">
+            <span class="cart-total-label">Total</span>
+            <span class="cart-total-val" id="cart-total">$0</span>
+        </div>
+        <div class="cart-foot-actions">
+            <a th:href="@{/cliente/carrito}" class="btn-cart-page">Ver carrito completo</a>
+            <button class="btn-checkout" onclick="checkout()"><i class="fas fa-credit-card"></i> Finalizar compra</button>
+        </div>
+    </div>
+</div>
+
+<!-- ── Modal producto ──────────────────────────────────────── -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+    <div class="modal" id="modal-box">
+        <button class="modal-close" onclick="closeModal()" aria-label="Cerrar"><i class="fas fa-times"></i></button>
+        <img id="modal-img" class="modal-img" src="" alt="" style="display:none">
+        <div class="modal-body">
+            <div class="modal-cat"  id="modal-cat"></div>
+            <div class="modal-name" id="modal-name"></div>
+            <div class="modal-store" id="modal-store"></div>
+            <div class="modal-desc" id="modal-desc"></div>
+            <div class="modal-price-row">
+                <span class="modal-price" id="modal-price"></span>
+                <span class="modal-price-old" id="modal-price-old" style="display:none"></span>
+                <span class="modal-stock" id="modal-stock"></span>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn-cart" id="modal-btn-cart"><i class="fas fa-bag-shopping"></i> Agregar al carrito</button>
+                <a class="modal-btn-ficha" id="modal-btn-chat" th:href="@{/chat}"><i class="far fa-comment-dots"></i> Chatear</a>
+                <a class="modal-btn-wa" id="modal-btn-wa" href="#" target="_blank" rel="noopener"><i class="fab fa-whatsapp"></i> Contactar</a>
+                <a class="modal-btn-ficha" id="modal-btn-ficha" th:href="@{/cliente}">Ver ficha y reseñas</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Toasts ──────────────────────────────────────────────── -->
+<div class="toast-container" id="toasts"></div>
+
+<script th:inline="javascript">
+/* ══════════════════════════════════════════════════════════════
+   CARRITO — 100% servidor, persistente en MariaDB.
+   El navegador solo envía el id del producto. El precio, la
+   disponibilidad y la cantidad válida SIEMPRE los devuelve la
+   base de datos desde /cliente/carrito/ajax.
+════════════════════════════════════════════════════════════════ */
+const URL_CART  = /*[[@{/cliente/carrito/ajax}]]*/ '';
+const URL_FAV   = /*[[@{/cliente/favoritos/toggle/ajax}]]*/ '';
+const URL_CHK   = /*[[@{/cliente/checkout}]]*/ '';
+const URL_FICHA = /*[[@{/cliente/producto}]]*/ '';
+const URL_CHAT  = /*[[@{/chat/iniciar}]]*/ '/chat/iniciar';
+const CSRF_TOKEN = document.querySelector('meta[name="_csrf"]')?.content;
+const CSRF_HEADER = document.querySelector('meta[name="_csrf_header"]')?.content || 'X-CSRF-TOKEN';
+const csrfHeaders = { 'Content-Type': 'application/x-www-form-urlencoded', [CSRF_HEADER]: CSRF_TOKEN };
+
+function money(n) { return '$' + Number(n || 0).toLocaleString('es-CO', { maximumFractionDigits: 0 }); }
+
+async function carritoFetch(accion, extra = {}) {
+    const body = new URLSearchParams({ accion, ...extra });
+    const res = await fetch(URL_CART, {
+        method: 'POST',
+        headers: csrfHeaders,
+        body
+    });
+    const data = await res.json();
+    if (data.ok) {
+        pintarCarrito(data);
+        if (data.cambio) toast('Ajustamos tu carrito: algún producto cambió de stock o ya no está disponible', 'err');
+    } else if (data.error) {
+        toast(data.error, 'err');
+    }
+    return data;
+}
+async function addToCart(id, nombre) {
+    const data = await carritoFetch('agregar', { id });
+    if (data.ok) toast('“' + String(nombre).substring(0, 28) + '” agregado', 'ok');
+}
+function removeFromCart(id) { carritoFetch('eliminar', { id }); }
+function changeQty(id, delta) { carritoFetch(delta > 0 ? 'incrementar' : 'disminuir', { id }); }
+
+function pintarCarrito(data) {
+    const badge = document.getElementById('cart-badge');
+    badge.textContent = data.count;
+    badge.style.display = data.count > 0 ? 'flex' : 'none';
+    document.getElementById('cart-total').textContent = money(data.total);
+    const body = document.getElementById('cart-body');
+    if (!data.items || data.items.length === 0) {
+        body.innerHTML = '<div class="cart-empty"><i class="fas fa-shopping-bag"></i><p>Tu carrito está vacío</p></div>';
+        return;
+    }
+    body.innerHTML = data.items.map(it => `
+        <div class="cart-item">
+            ${it.imagen ? `<img src="${it.imagen}" alt="${it.nombre}">` : `<div class="cart-item-noimg"><i class="fas fa-box-open"></i></div>`}
+            <div class="cart-item-info">
+                <div class="cart-item-name">${it.nombre}</div>
+                <div class="cart-item-store">${it.tienda}</div>
+                <div class="cart-item-controls">
+                    <button class="qty-btn" onclick="changeQty(${it.productoId}, -1)">−</button>
+                    <span class="qty-val">${it.cantidad}</span>
+                    <button class="qty-btn" onclick="changeQty(${it.productoId}, 1)">+</button>
+                    <span class="cart-item-unit">${money(it.precioUnit)} c/u</span>
+                    <button class="cart-item-del" onclick="removeFromCart(${it.productoId})" title="Quitar"><i class="fas fa-trash"></i></button>
+                </div>
+            </div>
+            <div class="cart-item-price">${money(it.subtotal)}</div>
+        </div>`).join('');
+}
+
+function openCart() {
+    document.getElementById('cart-drawer').classList.add('open');
+    document.getElementById('cart-overlay').classList.add('open');
+    carritoFetch('listar');
+}
+function closeCart() {
+    document.getElementById('cart-drawer').classList.remove('open');
+    document.getElementById('cart-overlay').classList.remove('open');
+}
+function checkout() { window.location = URL_CHK; }
+
+async function toggleFav(btn) {
+    const id = btn.dataset.id;
+    const res = await fetch(URL_FAV, {
+        method: 'POST',
+        headers: csrfHeaders,
+        body: new URLSearchParams({ productoId: id })
+    });
+    const data = await res.json();
+    if (data.ok) {
+        const icon = btn.querySelector('i');
+        btn.classList.toggle('active', data.favorito);
+        icon.className = data.favorito ? 'fas fa-heart' : 'far fa-heart';
+        const favBadge = document.getElementById('fav-badge');
+        if (favBadge && typeof data.count === 'number') {
+            favBadge.textContent = data.count;
+            favBadge.style.display = data.count > 0 ? 'flex' : 'none';
+        }
+        toast(data.favorito ? 'Guardado en favoritos ❤' : 'Quitado de favoritos', data.favorito ? 'ok' : '');
+    } else {
+        toast(data.error || 'No fue posible actualizar favoritos', 'err');
+    }
+}
+
+/* ── Modal de detalle rápido ─────────────────── */
+function openModal(card) {
+    const d = card.dataset;
+    const img = document.getElementById('modal-img');
+    if (d.img) { img.src = d.img; img.style.display = 'block'; } else { img.style.display = 'none'; }
+    document.getElementById('modal-cat').textContent = d.cat || '';
+    document.getElementById('modal-name').textContent = d.nombre || '';
+    document.getElementById('modal-store').innerHTML =
+        `<span class="prod-store-dot" style="background:#c9a84c"></span>` + (d.tienda || '');
+    document.getElementById('modal-desc').textContent = d.desc || 'Sin descripción.';
+    const price = document.getElementById('modal-price');
+    price.textContent = money(d.precio);
+    price.classList.toggle('oferta', d.oferta === '1');
+    const old = document.getElementById('modal-price-old');
+    if (d.oferta === '1' && d.precioRegular) { old.textContent = money(d.precioRegular); old.style.display = 'inline'; }
+    else old.style.display = 'none';
+    const stock = document.getElementById('modal-stock');
+    const s = parseInt(d.stock || '0', 10);
+    stock.textContent = s > 0 ? ('Stock: ' + s) : 'Agotado';
+    stock.style.color = s > 0 ? '' : '#b91c1c';
+    const btn = document.getElementById('modal-btn-cart');
+    btn.onclick = () => addToCart(d.id, d.nombre);
+    btn.style.display = s > 0 ? 'inline-flex' : 'none';
+    const wa = document.getElementById('modal-btn-wa');
+    if (d.wa) {
+        wa.href = 'https://wa.me/' + d.wa.replace(/\D/g, '') +
+            '?text=' + encodeURIComponent('Hola! Me interesa: ' + d.nombre + ' ($' + d.precioTxt + ') — vía Caboré');
+        wa.style.display = 'inline-flex';
+    } else wa.style.display = 'none';
+    document.getElementById('modal-btn-ficha').href = URL_FICHA + '/' + d.id;
+    const chatBtn = document.getElementById('modal-btn-chat');
+    if (chatBtn && d.tiendaId) {
+        chatBtn.href = URL_CHAT + '?tiendaId=' + encodeURIComponent(d.tiendaId);
+        chatBtn.style.display = 'inline-flex';
+    }
+    document.getElementById('modal-overlay').classList.add('open');
+}
+function closeModal(e) {
+    if (!e || e.target.id === 'modal-overlay') document.getElementById('modal-overlay').classList.remove('open');
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closeCart(); } });
+
+function toast(msg, tipo = '') {
+    const c = document.getElementById('toasts');
+    const t = document.createElement('div');
+    t.className = 'toast ' + tipo;
+    t.innerHTML = '<i class="fas ' + (tipo === 'ok' ? 'fa-check-circle' : 'fa-exclamation-circle') + '"></i> ' + msg;
+    c.appendChild(t);
+    setTimeout(() => t.remove(), 3200);
+}
+
+/* Carga inicial del carrito (insignia y drawer listos) */
+document.addEventListener('DOMContentLoaded', () => carritoFetch('listar'));
+</script>
 </body>
 </html>

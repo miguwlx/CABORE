@@ -112,9 +112,9 @@ body {
     width:100%;
     padding: 11px 14px;
     background: rgba(239,68,68,0.1);
-    border: 1px solid rgba(239,68,68,0.2);
+    border: 1px solid rgba(239,68,68,0.25);
     border-radius: 12px;
-    color: #fca5a5;
+    color: #b91c1c;
     font-family:'DM Sans',sans-serif;
     font-size: 14px;
     font-weight: 500;
@@ -281,9 +281,9 @@ input[type=color] { height:44px; cursor:pointer; padding:4px 8px; }
 }
 .btn-outline:hover { background:rgba(201,168,76,0.08); }
 .btn-red {
-    background:rgba(239,68,68,0.15);
-    border:1px solid rgba(239,68,68,0.25);
-    color:#fca5a5;
+    background:rgba(239,68,68,0.12);
+    border:1px solid rgba(239,68,68,0.28);
+    color:#b91c1c;
 }
 .btn-red:hover { background:rgba(239,68,68,0.25); }
 .btn-sm { padding:8px 14px; font-size:13px; }
